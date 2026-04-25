@@ -11,6 +11,8 @@ import {
 } from "@tasktrove/atoms/ui/views"
 import { currentRouteContextAtom } from "@tasktrove/atoms/ui/navigation"
 import { showTaskPanelAtom } from "@tasktrove/atoms/ui/dialogs"
+import { settingsAtom } from "@tasktrove/atoms/data/base/atoms"
+import { updateSettingsAtom } from "@tasktrove/atoms/core/settings"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -28,6 +30,7 @@ import {
   Table,
   ChartNoAxesCombined,
   Archive,
+  Volume2,
 } from "lucide-react"
 import { HelpPopover } from "@/components/ui/help-popover"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -49,6 +52,8 @@ export function ViewOptionsContent({ onAdvancedSearch }: ViewOptionsContentProps
   const showTaskPanel = useAtomValue(showTaskPanelAtom)
   const setViewOptions = useSetAtom(setViewOptionsAtom)
   const routeContext = useAtomValue(currentRouteContextAtom)
+  const settings = useAtomValue(settingsAtom)
+  const updateSettings = useSetAtom(updateSettingsAtom)
 
   // Centralized view option configurations (excluding kanban which is handled by route type)
   const getViewConfig = (view: string) => {
@@ -437,6 +442,21 @@ export function ViewOptionsContent({ onAdvancedSearch }: ViewOptionsContentProps
               id="compact-view"
               checked={viewState.compactView}
               onCheckedChange={(checked) => setViewOptions({ compactView: checked })}
+              className="cursor-pointer"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="sounds-enabled" className="text-sm font-medium flex items-center gap-2">
+              <Volume2 className="h-3 w-3" />
+              {t("viewOptions.displayOptions.sounds.title", "Sounds")}
+            </Label>
+            <Switch
+              id="sounds-enabled"
+              checked={settings.general.soundEnabled}
+              onCheckedChange={(checked) =>
+                void updateSettings({ general: { soundEnabled: checked } })
+              }
               className="cursor-pointer"
             />
           </div>
