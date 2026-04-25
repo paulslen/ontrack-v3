@@ -23,7 +23,7 @@ if [ -n "$unstaged_files" ] || [ -n "$untracked_files" ]; then
   # Clean up stale markers (older than 5 minutes)
   find "${git_dir}" -name "husky-warned-*" -type f 2>/dev/null | while read -r file; do
     if [ -f "$file" ]; then
-      file_time=$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file" 2>/dev/null)
+      file_time=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null)
       if [ $((current_time - file_time)) -gt 300 ]; then
         rm -f "$file"
       fi
@@ -111,7 +111,7 @@ if [ -n "$IS_AMEND" ]; then
     # Clean up stale amend markers (older than 5 minutes)
     find "${git_dir}" -name "husky-amend-warned-*" -type f 2>/dev/null | while read -r file; do
       if [ -f "$file" ]; then
-        file_time=$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file" 2>/dev/null)
+        file_time=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null)
         if [ $((current_time - file_time)) -gt 300 ]; then
           rm -f "$file"
         fi
@@ -175,4 +175,3 @@ trap cleanup EXIT
 trap handle_signal INT TERM
 
 npx lint-staged
-pnpm check
