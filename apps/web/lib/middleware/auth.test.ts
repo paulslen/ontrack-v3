@@ -471,6 +471,7 @@ describe("withAuthentication", () => {
           uiSettings: {
             weekStartsOn: undefined,
           },
+          ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
         },
         tasks: [],
         projects: [],
@@ -540,6 +541,7 @@ describe("withAuthentication", () => {
           uiSettings: {
             weekStartsOn: undefined,
           },
+          ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
         },
         tasks: [],
         projects: [],
@@ -611,6 +613,7 @@ describe("withAuthentication", () => {
           uiSettings: {
             weekStartsOn: undefined,
           },
+          ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
         },
         tasks: [],
         projects: [],
@@ -718,6 +721,7 @@ describe("withAuthentication", () => {
           uiSettings: {
             weekStartsOn: undefined,
           },
+          ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
         },
         tasks: [],
         projects: [],

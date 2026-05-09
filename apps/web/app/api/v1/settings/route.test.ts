@@ -76,6 +76,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   uiSettings: {
     weekStartsOn: undefined,
   },
+  ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
 }
 
 describe("GET /api/v1/settings", () => {

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useSetAtom, useAtomValue } from "jotai"
 import { useTranslation } from "@tasktrove/i18n"
-import { X, Flag, Folder, Users, Crosshair, GripVertical } from "lucide-react"
+import { X, Flag, Folder, Users, Crosshair, GripVertical, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TaskCheckbox } from "@/components/ui/custom/task-checkbox"
 import { EditableDiv } from "@/components/ui/custom/editable-div"
@@ -25,6 +25,8 @@ import { CommentContent } from "./comment-content"
 import { TaskActionsMenu } from "./task-actions-menu"
 import { TaskCompletionHistory } from "@/components/task/task-completion-history"
 import { TaskDebugBadge } from "@/components/debug"
+import { useAiComplete } from "@/hooks/use-ai-complete"
+import { AiOutputPanel } from "./ai-output-panel"
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback"
 import { updateTaskAtom, deleteTaskAtom, toggleTaskAtom } from "@tasktrove/atoms/core/tasks"
 import { projectsAtom } from "@tasktrove/atoms/data/base/atoms"
@@ -143,6 +145,24 @@ function TaskPanelContent({
   // Visual flash when metadata changes
   const getFlashClass = useTaskMetadataFlash(task)
 
+  const { state, generate, dismiss } = useAiComplete()
+  const settings = useAtomValue(settingsAtom)
+  const allLabels = useAtomValue(labelsAtom)
+  const aiEnabled = !!(settings.ai.enabled && settings.ai.apiKey)
+
+  const handleAiGenerate = useCallback(() => {
+    const labelNames = task.labels
+      .map((id) => allLabels.find((l) => l.id === id)?.name)
+      .filter((n): n is string => n !== undefined)
+    void generate({
+      description: task.description || "",
+      taskTitle: task.title,
+      projectName: getTaskProject()?.name,
+      dueDateStr: task.dueDate ? task.dueDate.toISOString() : undefined,
+      labelNames,
+    })
+  }, [task, allLabels, getTaskProject, generate])
+
   return (
     <div className={cn("space-y-2", className)}>
       {/* Debug Badge */}
@@ -246,9 +266,24 @@ function TaskPanelContent({
 
       {/* Description Section */}
       <div className="space-y-3">
-        <h3 className="text-sm text-foreground font-bold">
-          {t("sidePanel.description.title", "Description")}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm text-foreground font-bold">
+            {t("sidePanel.description.title", "Description")}
+          </h3>
+          {aiEnabled && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 gap-1 text-xs text-muted-foreground px-2"
+              onClick={handleAiGenerate}
+              disabled={state.status === "streaming"}
+              title="Expand with AI"
+            >
+              <Bot className="size-3" />
+              AI
+            </Button>
+          )}
+        </div>
         <MarkdownEditableDiv
           data-testid="editable-div"
           value={task.description || ""}
@@ -258,6 +293,18 @@ function TaskPanelContent({
           multiline={true}
           markdownEnabled={markdownEnabled}
         />
+        {(state.status === "streaming" || state.status === "done" || state.status === "error") && (
+          <AiOutputPanel
+            output={state.status === "error" ? `Error: ${state.message}` : state.output}
+            isStreaming={state.status === "streaming"}
+            onAccept={(output) => {
+              autoSave({ description: output })
+              dismiss()
+            }}
+            onDismiss={dismiss}
+            onRegenerate={handleAiGenerate}
+          />
+        )}
       </div>
 
       {/* Task Completion History Section */}

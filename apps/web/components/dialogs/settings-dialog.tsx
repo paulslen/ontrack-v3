@@ -5,7 +5,7 @@ import { useAtomValue, useSetAtom } from "jotai"
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Database, X, Bell, Settings, Menu, Palette, Clock, Users, Trophy } from "lucide-react"
+import { Database, X, Bell, Settings, Menu, Palette, Clock, Users, Trophy, Bot } from "lucide-react"
 // Future icons (not used yet):
 // import { Link, Target, Code } from "lucide-react"
 import { showSettingsDialogAtom, closeSettingsDialogAtom } from "@tasktrove/atoms/ui/dialogs"
@@ -25,6 +25,7 @@ import { AppearanceForm } from "@/components/dialogs/settings-forms/appearance-f
 import { SchedulerJobsForm } from "@/components/dialogs/settings-forms/scheduler-form"
 import { ProductivityForm } from "@/components/dialogs/settings-forms/productivity-form"
 import { UserManagementForm } from "@/components/dialogs/settings-forms/user-management-form"
+import { AiForm } from "@/components/dialogs/settings-forms/ai-form"
 // import { ApiForm } from "./settings-forms/api-form"
 
 // Settings category configuration
@@ -83,6 +84,12 @@ function SettingsContent() {
       ),
     },
     {
+      id: "ai",
+      title: t("settings.categories.ai.title", "AI"),
+      icon: Bot,
+      description: t("settings.categories.ai.description", "AI assistant, API key, and context"),
+    },
+    {
       id: "scheduler",
       title: t("settings.categories.scheduler.title", "Scheduler"),
       icon: Clock,
@@ -136,6 +143,8 @@ function SettingsContent() {
         return <ProductivityForm />
       case "users":
         return <UserManagementForm />
+      case "ai":
+        return <AiForm />
       // case "api":
       //   return <ApiForm />
       default:

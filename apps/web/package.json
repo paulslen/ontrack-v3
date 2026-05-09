@@ -28,6 +28,7 @@
     "generate-data": "tsx scripts/generate-data-cli.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "catalog:",
     "@atlaskit/pragmatic-drag-and-drop": "catalog:",
     "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "catalog:",
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "catalog:",
