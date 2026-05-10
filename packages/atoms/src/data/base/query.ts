@@ -138,6 +138,7 @@ const TEST_SETTINGS: UserSettings = {
   notifications: DEFAULT_NOTIFICATION_SETTINGS,
   general: DEFAULT_GENERAL_SETTINGS,
   uiSettings: DEFAULT_UI_SETTINGS,
+  ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
 };
 
 const TEST_USER: User = DEFAULT_USER;

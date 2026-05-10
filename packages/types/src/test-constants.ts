@@ -159,6 +159,7 @@ export const TEST_GROUPS_DATA: DataFileSerialization = {
     notifications: DEFAULT_NOTIFICATION_SETTINGS,
     general: DEFAULT_GENERAL_SETTINGS,
     uiSettings: DEFAULT_UI_SETTINGS,
+    ai: { enabled: false, model: "claude-haiku-4-5" as const, contextFile: "" },
   },
   user: DEFAULT_USER_DATA,
 };

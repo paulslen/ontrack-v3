@@ -177,6 +177,11 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   notifications: DEFAULT_NOTIFICATION_SETTINGS,
   general: DEFAULT_GENERAL_SETTINGS,
   uiSettings: DEFAULT_UI_SETTINGS,
+  ai: {
+    enabled: false,
+    model: "claude-haiku-4-5",
+    contextFile: "",
+  },
 };
 
 export const DEFAULT_USER: User = {

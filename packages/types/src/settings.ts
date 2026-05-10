@@ -119,6 +119,22 @@ export type UiSettings = z.infer<typeof UiSettingsSchema> & {
 };
 
 // =============================================================================
+// AI SETTINGS
+// =============================================================================
+
+export const AiModelSchema = z.enum(["claude-haiku-4-5", "claude-sonnet-4-6"]);
+export type AiModel = z.infer<typeof AiModelSchema>;
+
+export const AiSettingsSchema = z.object({
+  enabled: z.boolean(),
+  apiKey: z.string().optional(),
+  model: AiModelSchema,
+  contextFile: z.string(),
+});
+
+export type AiSettings = z.infer<typeof AiSettingsSchema>;
+
+// =============================================================================
 // USER SETTINGS
 // =============================================================================
 
@@ -130,6 +146,11 @@ export const UserSettingsSchema = z.object({
   notifications: NotificationSettingsSchema,
   general: GeneralSettingsSchema,
   uiSettings: UiSettingsSchema,
+  ai: AiSettingsSchema.default({
+    enabled: false,
+    model: "claude-haiku-4-5",
+    contextFile: "",
+  }),
 });
 
 /**
@@ -145,6 +166,7 @@ export const PartialUserSettingsSchema = z.object({
   notifications: NotificationSettingsSchema.partial().optional(),
   general: GeneralSettingsSchema.partial().optional(),
   uiSettings: UiSettingsSchema.partial().optional(),
+  ai: AiSettingsSchema.partial().optional(),
 });
 
 /**
