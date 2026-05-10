@@ -80,7 +80,7 @@ catalog:
   "@types/node": ^22.15.3
   "@types/papaparse": ^5.3.16
   "@types/react-dom": ^19.2.3
-  "@types/react": ^19.2.7
+  "@types/react": ^19.2.14
   "@types/uuid": ^10.0.0
   "@typescript-eslint/eslint-plugin": ^8.38.0
   "@typescript-eslint/parser": ^8.38.0
@@ -156,7 +156,7 @@ catalog:
   react-i18next: ^15.7.3
   react-markdown: ^10.1.0
   react-resizable-panels: ^3.0.6
-  react: ^19.2.3
+  react: ^19.2.6
   recharts: ^3.2.1
   remark-gfm: ^4.0.1
   rrule: ^2.8.1
