@@ -7,13 +7,13 @@ import { Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { TaskTroveLogo } from "@/components/ui/custom/tasktrove-logo"
-import { TaskTroveIcon } from "@/components/ui/custom/tasktrove-icon"
+import { Card, CardContent } from "@/components/ui/card"
 import { useTranslation } from "@tasktrove/i18n"
 import { API_ROUTES } from "@tasktrove/types/constants"
-import { PrivacyTermsNotice } from "@/components/legal/privacy-terms-notice"
-import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
+
+const inputFieldClassName =
+  "bg-white/5 border-white/15 text-white placeholder:text-white/40 focus-visible:border-emerald-400/50 focus-visible:ring-emerald-400/20"
 
 export type LoginFormProps = {
   needsPasswordSetup: boolean
@@ -168,23 +168,20 @@ export function LoginForm({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-md gap-0">
-        <CardHeader className="text-center space-y-4 p-6">
-          <div className="flex flex-col items-center space-y-3">
-            <TaskTroveIcon size="lg" rounded />
-            <TaskTroveLogo size="lg" />
-          </div>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
+    <div className="flex w-full items-center justify-center">
+      <Card className="w-full max-w-md gap-0 border-none bg-black/60 shadow-none backdrop-blur-md">
+        <CardContent className="p-6">
           {isHeaderAuthMode ? (
             // SSO Header Auth Mode
-            <div className="space-y-4 max-w-xs mx-auto">
+            <div className="space-y-6 max-w-xs mx-auto">
+              <p className="text-center font-sans text-base font-bold tracking-tight text-white/90">
+                welcome, please authenticate
+              </p>
               <div className="text-center space-y-4">
-                <div className="flex items-center justify-center p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-center p-4 bg-white/5 border border-white/10 rounded-lg">
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">Authenticated as</p>
-                    <p className="font-semibold text-lg">{headerAuthUser}</p>
+                    <p className="text-sm text-white/50 mb-1">Authenticated as</p>
+                    <p className="font-semibold text-lg text-white">{headerAuthUser}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -215,7 +212,7 @@ export function LoginForm({
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4 max-w-xs mx-auto">
+            <form onSubmit={handleSubmit} className="space-y-2 max-w-64 mx-auto">
               {extraFields && extraFieldsPlacement === "before" ? (
                 <div className="space-y-2">{extraFields}</div>
               ) : null}
@@ -223,10 +220,10 @@ export function LoginForm({
                 // Password Setup Mode
                 <>
                   <div className="text-center space-y-2 mb-4">
-                    <h2 className="text-lg font-semibold">
+                    <p className="font-sans text-base font-bold tracking-tight text-white/90">
                       {t("setup.title", "First Time Setup")}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
+                    </p>
+                    <p className="text-sm text-white/50">
                       {t(
                         "setup.description",
                         "Welcome! Let's complete your initial setup to get started.",
@@ -243,7 +240,7 @@ export function LoginForm({
                           value={username}
                           onChange={(e) => onUsernameChange(e.target.value)}
                           disabled={isLoading || usernameChangeDisabled}
-                          className={error ? "border-red-500" : ""}
+                          className={cn(inputFieldClassName, error && "border-red-500")}
                           autoFocus={true}
                         />
                       </div>
@@ -257,13 +254,11 @@ export function LoginForm({
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           disabled={isLoading}
-                          className={
-                            error
-                              ? "border-red-500" + (password.length > 0 ? " pr-10" : "")
-                              : password.length > 0
-                                ? "pr-10"
-                                : ""
-                          }
+                          className={cn(
+                            inputFieldClassName,
+                            password.length > 0 && "pr-10",
+                            error && "border-red-500",
+                          )}
                           autoFocus={!isUsernameRequired}
                         />
                         {password.length > 0 && (
@@ -296,7 +291,7 @@ export function LoginForm({
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         disabled={isLoading}
-                        className={error ? "border-red-500" : ""}
+                        className={cn(inputFieldClassName, error && "border-red-500")}
                       />
                     </div>
                     {error && <p className="text-sm text-red-500">{error}</p>}
@@ -305,9 +300,11 @@ export function LoginForm({
               ) : (
                 // Normal Login Mode
                 <>
+                  <p className="text-left font-sans text-base font-bold tracking-tight text-white/90 mb-3">
+                    welcome, please authenticate
+                  </p>
                   {isUsernameRequired && onUsernameChange && (
                     <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
                       <Input
                         id="username"
                         type="text"
@@ -315,14 +312,13 @@ export function LoginForm({
                         value={username}
                         onChange={(e) => onUsernameChange(e.target.value)}
                         disabled={isLoading}
-                        className={error ? "border-red-500" : ""}
+                        className={cn(inputFieldClassName, error && "border-red-500")}
                         autoFocus={true}
                       />
                     </div>
                   )}
                   <div className="space-y-2">
                     <div className="relative">
-                      <Label htmlFor="password">Password</Label>
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
@@ -330,13 +326,11 @@ export function LoginForm({
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={isLoading}
-                        className={
-                          error
-                            ? "border-red-500" + (password.length > 0 ? " pr-10" : "")
-                            : password.length > 0
-                              ? "pr-10"
-                              : ""
-                        }
+                        className={cn(
+                          inputFieldClassName,
+                          password.length > 0 && "pr-10",
+                          error && "border-red-500",
+                        )}
                         autoFocus={!isUsernameRequired}
                       />
                       {password.length > 0 && (
@@ -367,7 +361,11 @@ export function LoginForm({
               {extraFields && extraFieldsPlacement === "after" ? (
                 <div className="space-y-2">{extraFields}</div>
               ) : null}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full bg-zinc-900 text-white border border-white/10 hover:bg-zinc-800 transition-shadow hover:shadow-[0_0_24px_rgba(16,185,129,0.35)]"
+                disabled={isLoading}
+              >
                 {isLoading
                   ? needsPasswordSetup
                     ? t("buttons.settingUp", "Setting up...")
@@ -378,8 +376,6 @@ export function LoginForm({
               </Button>
             </form>
           )}
-          <div className="my-4" />
-          <PrivacyTermsNotice />
         </CardContent>
       </Card>
     </div>
