@@ -1,7 +1,7 @@
 import React from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { FlickerText } from "./flicker-text"
-import { useHalloween } from "@/app/contexts/halloween-context"
 
 interface TaskTroveLogoProps {
   className?: string
@@ -9,46 +9,30 @@ interface TaskTroveLogoProps {
   badge?: React.ReactNode
 }
 
-const SIZE_CLASSES = {
-  sm: "text-xl",
-  md: "text-2xl",
-  lg: "text-3xl",
+const LOGO_WIDTH_BY_SIZE = {
+  sm: 120,
+  md: 150,
+  lg: 180,
 } as const
 
-export const getLogoFontStyle = () =>
-  cn(
-    "font-semibold tracking-[0.4em] text-sidebar-foreground uppercase",
-    "transition-all duration-300 ease-in-out",
-    "hover:text-primary", // Color change on hover
-    "hover:[text-shadow:0.5px_0_0_currentColor]", // Fake bold effect in light mode using text-shadow
-    // Removed dark mode glow - FlickerText handles this with animation
-  )
+const LOGO_ASPECT_RATIO = 45 / 180
 
 export const getLogoUnderlineStyle = () =>
   cn(
-    "relative pb-1",
-    "after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-[0.4em] after:h-[1px]",
+    "relative inline-block pb-1",
+    "after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px]",
     "after:bg-sidebar-foreground/30 after:transition-all after:duration-300",
-    "hover:after:bg-primary hover:after:h-[2px]", // Thicker underline on hover
-    // Removed dark mode underline glow - FlickerText handles all glow effects
+    "hover:after:bg-primary hover:after:h-[2px]",
   )
 
 export function TaskTroveLogo({ className, size = "md", badge }: TaskTroveLogoProps) {
-  const { isHalloweenEnabled } = useHalloween()
-
-  // 🎃 Replace "O" with pumpkin emoji when Halloween theme is enabled
-  const displayText = isHalloweenEnabled ? "TaskTr🎃ve" : "TaskTrove"
+  const width = LOGO_WIDTH_BY_SIZE[size]
+  const height = Math.round(width * LOGO_ASPECT_RATIO)
 
   return (
-    <h1
-      className={cn(
-        "cursor-default flex flex-col items-center gap-2",
-        SIZE_CLASSES[size],
-        className,
-      )}
-    >
-      <FlickerText className={cn(getLogoFontStyle(), getLogoUnderlineStyle())}>
-        {displayText}
+    <h1 className={cn("cursor-default flex flex-col items-center gap-2", className)}>
+      <FlickerText className={getLogoUnderlineStyle()}>
+        <Image src="/progress_180x45.png" alt="TaskTrove" width={width} height={height} priority />
       </FlickerText>
       {badge}
     </h1>

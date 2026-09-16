@@ -248,6 +248,17 @@ export function PageHeader({
           {/* Notifications Badge - Coming soon (Pro only) */}
           <NotificationsBadge />
 
+          {/* Search */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onAdvancedSearch?.()}
+            className="cursor-pointer"
+            title={t("header.search", "Search")}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+
           {/* View Options Popover - Uses atoms directly */}
           <ViewOptionsPopover onAdvancedSearch={onAdvancedSearch} />
 

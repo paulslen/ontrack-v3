@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-import { useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
 import { Separator } from "@/components/ui/separator"
 import {
   Collapsible,
@@ -22,8 +21,6 @@ import {
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Tag, Plus, ChevronDown } from "lucide-react"
-import { SearchIcon, type SearchIconHandle } from "@/components/ui/search"
-import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus"
 import { ProjectContextMenu } from "@/components/navigation/project-context-menu"
 import { LabelContextMenu } from "./label-context-menu"
 import { DraggableProjectGroupItem } from "./draggable-project-group-item"
@@ -46,8 +43,6 @@ import type { Project, Label } from "@tasktrove/types/core"
 import type { ProjectGroup } from "@tasktrove/types/group"
 import { isGroup } from "@tasktrove/types/group"
 import {
-  openSearchAtom,
-  openQuickAddAtom,
   openProjectDialogAtom,
   openLabelDialogAtom,
   pathnameAtom,
@@ -82,22 +77,12 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
   const { handleDrop: handleViewDrop } = useSidebarViewDrop()
 
   // Get action atoms
-  const openSearch = useSetAtom(openSearchAtom)
-  const openQuickAdd = useSetAtom(openQuickAddAtom)
   const openProjectDialog = useSetAtom(openProjectDialogAtom)
   const openLabelDialog = useSetAtom(openLabelDialogAtom)
-
-  // Card button styles for quick actions
-  const CARD_BUTTON_STYLES =
-    "h-[100px] w-full flex flex-col items-center justify-center gap-1.5 bg-card border-1 border-border hover:border-primary/50 hover:bg-primary/5 hover:scale-105 rounded-lg transition-all duration-200 cursor-pointer"
 
   const mainNavItems = (mainNavItemsFilter ?? ((items) => items))(
     getMainNavItems({ taskCountsData, t }),
   )
-
-  // Refs for controlling animated icons
-  const searchIconRef = useRef<SearchIconHandle>(null)
-  const plusIconRef = useRef<PlusIconHandle>(null)
 
   return (
     <>
@@ -110,81 +95,71 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
         id="drag-drop-announcements"
       />
 
-      {/* Quick Action Buttons */}
-      <div className="grid grid-cols-2 gap-3 p-4 pt-0">
-        <Button
-          variant="ghost"
-          className={CARD_BUTTON_STYLES}
-          onClick={openSearch}
-          onMouseEnter={() => searchIconRef.current?.startAnimation()}
-          onMouseLeave={() => searchIconRef.current?.stopAnimation()}
-        >
-          <SearchIcon ref={searchIconRef} size={20} />
-          <span className="text-sm font-medium">{t("quickActions.search", "Search")}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className={CARD_BUTTON_STYLES}
-          onClick={openQuickAdd}
-          onMouseEnter={() => plusIconRef.current?.startAnimation()}
-          onMouseLeave={() => plusIconRef.current?.stopAnimation()}
-        >
-          <PlusIcon ref={plusIconRef} size={20} />
-          <span className="text-sm font-medium">{t("quickActions.add", "Add")}</span>
-        </Button>
-      </div>
-
       <Separator />
 
       {/* Main Navigation */}
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {mainNavItems.map((item) => {
-              const viewId = isSidebarViewDropId(item.id) ? item.id : null
-              const button = item.comingSoon ? (
-                <SidebarMenuButton isActive={false}>
-                  {item.icon}
-                  <span>{item.label}</span>
-                  {item.count !== undefined && <SidebarMenuBadge>{item.count}</SidebarMenuBadge>}
-                </SidebarMenuButton>
-              ) : (
-                <SidebarMenuButton asChild isActive={pathname === item.href}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    <span>{item.label}</span>
-                    {item.count !== undefined && <SidebarMenuBadge>{item.count}</SidebarMenuBadge>}
-                  </Link>
-                </SidebarMenuButton>
-              )
-              const maybeDroppableButton =
-                !item.comingSoon && viewId !== null ? (
-                  <DropTargetSidebarView viewId={viewId} onDrop={handleViewDrop}>
-                    {button}
-                  </DropTargetSidebarView>
-                ) : (
-                  button
-                )
-
-              return (
-                <SidebarMenuItem key={item.id}>
-                  {item.comingSoon ? (
-                    <ComingSoonWrapper
-                      disabled={true}
-                      featureName={item.featureName || item.label}
-                      proOnly={item.proOnly}
-                    >
-                      {maybeDroppableButton}
-                    </ComingSoonWrapper>
+      <Collapsible defaultOpen className="group/collapsible">
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <CollapsibleTrigger className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground">
+              <ChevronDown className="h-3 w-3 mr-2 transition-transform group-data-[state=closed]/collapsible:-rotate-90" />
+              {t("sections.views", "Views")}
+            </CollapsibleTrigger>
+          </SidebarGroupLabel>
+          <CollapsibleContent>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {mainNavItems.map((item) => {
+                  const viewId = isSidebarViewDropId(item.id) ? item.id : null
+                  const button = item.comingSoon ? (
+                    <SidebarMenuButton isActive={false}>
+                      {item.icon}
+                      <span>{item.label}</span>
+                      {item.count !== undefined && (
+                        <SidebarMenuBadge>{item.count}</SidebarMenuBadge>
+                      )}
+                    </SidebarMenuButton>
                   ) : (
-                    maybeDroppableButton
-                  )}
-                </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <Link href={item.href}>
+                        {item.icon}
+                        <span>{item.label}</span>
+                        {item.count !== undefined && (
+                          <SidebarMenuBadge>{item.count}</SidebarMenuBadge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  )
+                  const maybeDroppableButton =
+                    !item.comingSoon && viewId !== null ? (
+                      <DropTargetSidebarView viewId={viewId} onDrop={handleViewDrop}>
+                        {button}
+                      </DropTargetSidebarView>
+                    ) : (
+                      button
+                    )
+
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      {item.comingSoon ? (
+                        <ComingSoonWrapper
+                          disabled={true}
+                          featureName={item.featureName || item.label}
+                          proOnly={item.proOnly}
+                        >
+                          {maybeDroppableButton}
+                        </ComingSoonWrapper>
+                      ) : (
+                        maybeDroppableButton
+                      )}
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
 
       <Separator />
 

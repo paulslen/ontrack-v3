@@ -222,8 +222,9 @@ function Sidebar({
     return (
       <div
         data-slot="sidebar"
+        data-theme="dark"
         className={cn(
-          "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+          "bg-black text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
           className,
         )}
         {...props}
@@ -240,7 +241,8 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
+          data-theme="dark"
+          className="bg-black text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
           style={
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
             {
@@ -299,7 +301,8 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
+          data-theme="dark"
+          className="bg-black group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
         >
           {children}
         </div>

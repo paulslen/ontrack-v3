@@ -14,7 +14,7 @@ export function AppSidebarFooter() {
   const { hasUpdate, latestVersion, releaseUrl } = useUpdateChecker()
 
   return (
-    <SidebarFooter className="bg-background border-t gap-0">
+    <SidebarFooter className="bg-black border-t border-white/10 gap-0">
       {/* Updates Available */}
       {hasUpdate && (
         <SidebarMenu>
