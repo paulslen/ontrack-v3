@@ -50,7 +50,7 @@ import {
   stopEditingLabelAtom,
 } from "@tasktrove/atoms/ui/navigation"
 import { useTranslation } from "@tasktrove/i18n"
-import { getMainNavItems } from "@/components/navigation/main-nav-items"
+import { getMainNavItems, type MainNavItem } from "@/components/navigation/main-nav-items"
 import { ComingSoonWrapper } from "@/components/ui/coming-soon-wrapper"
 import { createLabelSlug } from "@tasktrove/utils/routing"
 
@@ -83,6 +83,51 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
   const mainNavItems = (mainNavItemsFilter ?? ((items) => items))(
     getMainNavItems({ taskCountsData, t }),
   )
+  const todayNavItem = mainNavItems.find((item) => item.id === "today")
+  const otherNavItems = mainNavItems.filter((item) => item.id !== "today")
+
+  const renderNavItem = (item: MainNavItem) => {
+    const viewId = isSidebarViewDropId(item.id) ? item.id : null
+    const button = item.comingSoon ? (
+      <SidebarMenuButton isActive={false}>
+        {item.icon}
+        <span>{item.label}</span>
+        {item.count !== undefined && <SidebarMenuBadge>{item.count}</SidebarMenuBadge>}
+      </SidebarMenuButton>
+    ) : (
+      <SidebarMenuButton asChild isActive={pathname === item.href}>
+        <Link href={item.href}>
+          {item.icon}
+          <span>{item.label}</span>
+          {item.count !== undefined && <SidebarMenuBadge>{item.count}</SidebarMenuBadge>}
+        </Link>
+      </SidebarMenuButton>
+    )
+    const maybeDroppableButton =
+      !item.comingSoon && viewId !== null ? (
+        <DropTargetSidebarView viewId={viewId} onDrop={handleViewDrop}>
+          {button}
+        </DropTargetSidebarView>
+      ) : (
+        button
+      )
+
+    return (
+      <SidebarMenuItem key={item.id}>
+        {item.comingSoon ? (
+          <ComingSoonWrapper
+            disabled={true}
+            featureName={item.featureName || item.label}
+            proOnly={item.proOnly}
+          >
+            {maybeDroppableButton}
+          </ComingSoonWrapper>
+        ) : (
+          maybeDroppableButton
+        )}
+      </SidebarMenuItem>
+    )
+  }
 
   return (
     <>
@@ -97,8 +142,17 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
 
       <Separator />
 
+      {/* Today - pinned above the collapsible Views section */}
+      {todayNavItem && (
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>{renderNavItem(todayNavItem)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+
       {/* Main Navigation */}
-      <Collapsible defaultOpen className="group/collapsible">
+      <Collapsible className="group/collapsible">
         <SidebarGroup>
           <SidebarGroupLabel>
             <CollapsibleTrigger className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground">
@@ -108,54 +162,7 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
           </SidebarGroupLabel>
           <CollapsibleContent>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {mainNavItems.map((item) => {
-                  const viewId = isSidebarViewDropId(item.id) ? item.id : null
-                  const button = item.comingSoon ? (
-                    <SidebarMenuButton isActive={false}>
-                      {item.icon}
-                      <span>{item.label}</span>
-                      {item.count !== undefined && (
-                        <SidebarMenuBadge>{item.count}</SidebarMenuBadge>
-                      )}
-                    </SidebarMenuButton>
-                  ) : (
-                    <SidebarMenuButton asChild isActive={pathname === item.href}>
-                      <Link href={item.href}>
-                        {item.icon}
-                        <span>{item.label}</span>
-                        {item.count !== undefined && (
-                          <SidebarMenuBadge>{item.count}</SidebarMenuBadge>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  )
-                  const maybeDroppableButton =
-                    !item.comingSoon && viewId !== null ? (
-                      <DropTargetSidebarView viewId={viewId} onDrop={handleViewDrop}>
-                        {button}
-                      </DropTargetSidebarView>
-                    ) : (
-                      button
-                    )
-
-                  return (
-                    <SidebarMenuItem key={item.id}>
-                      {item.comingSoon ? (
-                        <ComingSoonWrapper
-                          disabled={true}
-                          featureName={item.featureName || item.label}
-                          proOnly={item.proOnly}
-                        >
-                          {maybeDroppableButton}
-                        </ComingSoonWrapper>
-                      ) : (
-                        maybeDroppableButton
-                      )}
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
+              <SidebarMenu>{otherNavItems.map(renderNavItem)}</SidebarMenu>
             </SidebarGroupContent>
           </CollapsibleContent>
         </SidebarGroup>
@@ -164,7 +171,7 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
       <Separator />
 
       {/* Projects Section */}
-      <Collapsible defaultOpen className="group/collapsible">
+      <Collapsible className="group/collapsible">
         <SidebarGroup>
           <SidebarGroupLabel>
             <div className="flex items-center justify-between w-full">
@@ -226,7 +233,7 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
       <Separator />
 
       {/* Labels Section */}
-      <Collapsible defaultOpen className="group/collapsible">
+      <Collapsible className="group/collapsible">
         <SidebarGroup>
           <SidebarGroupLabel>
             <div className="flex items-center justify-between w-full">

@@ -117,7 +117,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   requireInteraction: true,
 };
 export const DEFAULT_GENERAL_SETTINGS = {
-  startView: "all" as const, // Corresponds to DEFAULT_ROUTE "/all"
+  startView: "today" as const, // Corresponds to DEFAULT_ROUTE "/today"
   soundEnabled: true,
   linkifyEnabled: true,
   markdownEnabled: true,

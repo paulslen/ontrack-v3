@@ -1,6 +1,6 @@
 import React from "react"
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@/test-utils"
+import { render, screen, fireEvent } from "@/test-utils"
 import { SidebarNav } from "./sidebar-nav"
 import { SidebarProvider } from "@/components/ui/custom/sidebar"
 import { mockNextNavigation } from "@/test-utils/mock-router"
@@ -174,16 +174,20 @@ describe("SidebarNav", () => {
   it("renders without props using atoms", () => {
     render(<SidebarNav />, { wrapper: TestWrapper })
 
-    // Check for main navigation items
-    expect(screen.getByText("All Tasks")).toBeInTheDocument()
-    expect(screen.getByText("Inbox")).toBeInTheDocument()
+    // Today is pinned above the collapsible Views section, so it's always visible
     expect(screen.getByText("Today")).toBeInTheDocument()
-    expect(screen.getByText("Upcoming")).toBeInTheDocument()
-    expect(screen.getByText("Completed")).toBeInTheDocument()
 
-    // Check for collapsible section titles
+    // Check for collapsible section titles (Views, Projects and Labels are collapsed by default)
+    expect(screen.getByText("Views")).toBeInTheDocument()
     expect(screen.getByText("Projects")).toBeInTheDocument()
     expect(screen.getByText("Labels")).toBeInTheDocument()
+
+    // Expand the Views section to verify its items render
+    fireEvent.click(screen.getByText("Views"))
+    expect(screen.getByText("All Tasks")).toBeInTheDocument()
+    expect(screen.getByText("Inbox")).toBeInTheDocument()
+    expect(screen.getByText("Upcoming")).toBeInTheDocument()
+    expect(screen.getByText("Completed")).toBeInTheDocument()
 
     // Note: "More" section and Settings have been moved to profile menu
   })
@@ -231,6 +235,9 @@ describe("SidebarNav", () => {
     // First check that the Projects section exists
     expect(screen.getByText("Projects")).toBeInTheDocument()
 
+    // Projects is collapsed by default, so expand it to reach its items
+    fireEvent.click(screen.getByText("Projects"))
+
     // Check that project group is rendered
     expect(screen.getByTestId("project-group-item")).toBeInTheDocument()
     expect(screen.getByText("Work Projects")).toBeInTheDocument()
@@ -260,6 +267,9 @@ describe("SidebarNav", () => {
 
   it("renders completed navigation item and supports count badges", () => {
     render(<SidebarNav />, { wrapper: TestWrapper })
+
+    // Views is collapsed by default, so expand it to reach its items
+    fireEvent.click(screen.getByText("Views"))
 
     // Verify that the completed navigation item exists
     const completedLink = screen.getByRole("link", { name: /completed/i })

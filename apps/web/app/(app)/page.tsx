@@ -15,7 +15,7 @@ export default function HomePage() {
     // Get the default page from settings, with fallback to DEFAULT_ROUTE
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     const generalSettings = (settings as { general: { startView?: string } }).general
-    const startView = generalSettings.startView ?? "all"
+    const startView = generalSettings.startView ?? "today"
 
     let redirectPath: string
     if (startView === "lastViewed") {
