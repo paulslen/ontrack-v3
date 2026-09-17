@@ -25,7 +25,10 @@ import {
   Square,
   GripVertical,
   X,
+  ArrowUp,
+  ArrowRight,
 } from "lucide-react"
+import { addDays } from "date-fns"
 import { cn, getContrastColor } from "@/lib/utils"
 import { formatTime, getEffectiveEstimation } from "@/lib/utils/time-estimation"
 import { getPriorityColor, getPriorityTextColor } from "@/lib/color-utils"
@@ -1470,8 +1473,8 @@ export function TaskItem({
     >
       {/* Main Layout - Flex with proper alignment */}
       <div className="flex gap-2 sm:gap-3">
-        {/* Left Side - Checkboxes aligned with title */}
-        <div className="flex items-start gap-2 sm:gap-3 flex-shrink-0">
+        {/* Left Side - Checkbox and quick due-date actions, stacked */}
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
           {/* Task Completion Checkbox */}
           <TaskCheckbox
             checked={task.completed}
@@ -1479,6 +1482,34 @@ export function TaskItem({
             className="mt-0.5"
             data-action="toggle"
           />
+
+          {/* Quick due-date actions - do not affect completion */}
+          <button
+            type="button"
+            className="flex items-center justify-center size-7 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            data-action="set-due-today"
+            title={t("actions.setDueToday", "Set due date to today")}
+            aria-label={t("actions.setDueToday", "Set due date to today")}
+            onClick={(e) => {
+              e.stopPropagation()
+              updateTask({ updateRequest: { id: task.id, dueDate: new Date() } })
+            }}
+          >
+            <ArrowUp className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-center size-7 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            data-action="set-due-tomorrow"
+            title={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
+            aria-label={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
+            onClick={(e) => {
+              e.stopPropagation()
+              updateTask({ updateRequest: { id: task.id, dueDate: addDays(new Date(), 1) } })
+            }}
+          >
+            <ArrowRight className="h-[18px] w-[18px]" />
+          </button>
         </div>
 
         {/* Right Side - All Content Vertically Aligned */}
