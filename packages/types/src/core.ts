@@ -58,6 +58,16 @@ export const TaskCommentSchema = z.object({
 });
 
 /**
+ * Schema for a single message in a task's AI chat
+ */
+export const AiChatMessageSchema = z.object({
+  /** Who wrote the message */
+  role: z.enum(["user", "assistant"]),
+  /** Message text (assistant messages are markdown) */
+  content: z.string(),
+});
+
+/**
  * Schema for a user account
  */
 export const UserSchema = z.object({
@@ -205,6 +215,8 @@ export const TaskSchema = z.object({
   subtasks: z.array(SubtaskSchema),
   /** Comments on this task */
   comments: z.array(TaskCommentSchema),
+  /** AI chat conversation about this task */
+  aiChat: z.array(AiChatMessageSchema).optional(),
   /** When the task was created */
   createdAt: flexibleDateTimeSchema,
   /** When the task was completed (if completed) */
@@ -276,6 +288,7 @@ export const ScheduledNotificationSetSchema = z.set(
 
 export type Subtask = z.infer<typeof SubtaskSchema>;
 export type TaskComment = z.infer<typeof TaskCommentSchema>;
+export type AiChatMessage = z.infer<typeof AiChatMessageSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type ViewState = z.infer<typeof ViewStateSchema>;
 export type ViewStates = z.infer<typeof ViewStatesSchema>;

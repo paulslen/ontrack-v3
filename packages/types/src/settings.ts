@@ -122,7 +122,11 @@ export type UiSettings = z.infer<typeof UiSettingsSchema> & {
 // AI SETTINGS
 // =============================================================================
 
-export const AiModelSchema = z.enum(["claude-haiku-4-5", "claude-sonnet-4-6"]);
+export const AiModelSchema = z.enum([
+  "claude-haiku-4-5",
+  "claude-sonnet-4-6",
+  "claude-sonnet-5",
+]);
 export type AiModel = z.infer<typeof AiModelSchema>;
 
 export const AiSettingsSchema = z.object({
@@ -148,7 +152,7 @@ export const UserSettingsSchema = z.object({
   uiSettings: UiSettingsSchema,
   ai: AiSettingsSchema.default({
     enabled: false,
-    model: "claude-haiku-4-5",
+    model: "claude-sonnet-5",
     contextFile: "",
   }),
 });

@@ -179,7 +179,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   uiSettings: DEFAULT_UI_SETTINGS,
   ai: {
     enabled: false,
-    model: "claude-haiku-4-5",
+    model: "claude-sonnet-5",
     contextFile: "",
   },
 };

@@ -23,6 +23,7 @@ import type { AiModel } from "@tasktrove/types/settings"
 const AI_MODEL_LABELS: Record<AiModel, string> = {
   "claude-haiku-4-5": "Claude Haiku 4.5 (Fast)",
   "claude-sonnet-4-6": "Claude Sonnet 4.6 (Balanced)",
+  "claude-sonnet-5": "Claude Sonnet 5 (Recommended)",
 }
 
 const CONTEXT_FILE_PLACEHOLDER = `# About Me
@@ -64,7 +65,7 @@ export function AiForm() {
     <div className="space-y-6">
       <SettingsCard
         title="Enable AI"
-        description="Use AI to expand task descriptions into actionable content."
+        description="Chat with AI about each task from the task panel."
       >
         <div className="flex items-center justify-between">
           <Label htmlFor="ai-enabled">Enable AI</Label>

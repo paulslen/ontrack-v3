@@ -3,8 +3,9 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useSetAtom, useAtomValue } from "jotai"
 import { useTranslation } from "@tasktrove/i18n"
-import { X, Flag, Folder, Users, Crosshair, GripVertical, Bot } from "lucide-react"
+import { X, Flag, Folder, Users, Crosshair, GripVertical, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { TaskCheckbox } from "@/components/ui/custom/task-checkbox"
 import { EditableDiv } from "@/components/ui/custom/editable-div"
 import { MarkdownEditableDiv } from "@/components/ui/custom/markdown-editable-div"
@@ -25,8 +26,7 @@ import { CommentContent } from "./comment-content"
 import { TaskActionsMenu } from "./task-actions-menu"
 import { TaskCompletionHistory } from "@/components/task/task-completion-history"
 import { TaskDebugBadge } from "@/components/debug"
-import { useAiComplete } from "@/hooks/use-ai-complete"
-import { AiOutputPanel } from "./ai-output-panel"
+import { TaskAiChat } from "./task-ai-chat"
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback"
 import { updateTaskAtom, deleteTaskAtom, toggleTaskAtom } from "@tasktrove/atoms/core/tasks"
 import { projectsAtom } from "@tasktrove/atoms/data/base/atoms"
@@ -117,6 +117,30 @@ function SidePanelDragHandle({
 
   return <div ref={ref}>{children}</div>
 }
+
+// Section that starts collapsed; `hint` is shown next to the title when collapsed content exists
+function CollapsibleSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="space-y-3">
+      <CollapsibleTrigger className="flex w-full items-center gap-1 text-sm text-foreground font-bold hover:text-foreground/80">
+        <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+        {title}
+        {hint && <span className="text-xs font-normal text-muted-foreground">{hint}</span>}
+      </CollapsibleTrigger>
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 // Shared task panel content component
 interface TaskPanelContentProps {
   task: Task
@@ -145,23 +169,8 @@ function TaskPanelContent({
   // Visual flash when metadata changes
   const getFlashClass = useTaskMetadataFlash(task)
 
-  const { state, generate, dismiss } = useAiComplete()
   const settings = useAtomValue(settingsAtom)
-  const allLabels = useAtomValue(labelsAtom)
-  const aiEnabled = !!(settings.ai.enabled && settings.ai.apiKey)
-
-  const handleAiGenerate = useCallback(() => {
-    const labelNames = task.labels
-      .map((id) => allLabels.find((l) => l.id === id)?.name)
-      .filter((n): n is string => n !== undefined)
-    void generate({
-      description: task.description || "",
-      taskTitle: task.title,
-      projectName: getTaskProject()?.name,
-      dueDateStr: task.dueDate ? task.dueDate.toISOString() : undefined,
-      labelNames,
-    })
-  }, [task, allLabels, getTaskProject, generate])
+  const aiEnabled = settings.ai.enabled && Boolean(settings.ai.apiKey)
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -264,26 +273,14 @@ function TaskPanelContent({
         </div>
       </div>
 
-      {/* Description Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm text-foreground font-bold">
-            {t("sidePanel.description.title", "Description")}
-          </h3>
-          {aiEnabled && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 gap-1 text-xs text-muted-foreground px-2"
-              onClick={handleAiGenerate}
-              disabled={state.status === "streaming"}
-              title="Expand with AI"
-            >
-              <Bot className="size-3" />
-              AI
-            </Button>
-          )}
-        </div>
+      {/* AI Chat Section */}
+      {aiEnabled && <TaskAiChat key={task.id} task={task} />}
+
+      {/* Description Section (collapsed by default) */}
+      <CollapsibleSection
+        title={t("sidePanel.description.title", "Description")}
+        hint={task.description?.trim() ? "•" : undefined}
+      >
         <MarkdownEditableDiv
           data-testid="editable-div"
           value={task.description || ""}
@@ -293,19 +290,7 @@ function TaskPanelContent({
           multiline={true}
           markdownEnabled={markdownEnabled}
         />
-        {(state.status === "streaming" || state.status === "done" || state.status === "error") && (
-          <AiOutputPanel
-            output={state.status === "error" ? `Error: ${state.message}` : state.output}
-            isStreaming={state.status === "streaming"}
-            onAccept={(output) => {
-              autoSave({ description: output })
-              dismiss()
-            }}
-            onDismiss={dismiss}
-            onRegenerate={handleAiGenerate}
-          />
-        )}
-      </div>
+      </CollapsibleSection>
 
       {/* Task Completion History Section */}
       <TaskCompletionHistory task={task} />
@@ -331,13 +316,13 @@ function TaskPanelContent({
         />
       </div>
 
-      {/* Comments Section */}
-      <div className="space-y-3">
-        <h3 className="text-sm text-foreground font-bold">
-          {t("sidePanel.comments.title", "Comments")}
-        </h3>
+      {/* Comments Section (collapsed by default) */}
+      <CollapsibleSection
+        title={t("sidePanel.comments.title", "Comments")}
+        hint={task.comments.length > 0 ? String(task.comments.length) : undefined}
+      >
         <CommentContent task={task} onAddComment={onAddComment} mode="inline" />
-      </div>
+      </CollapsibleSection>
 
       {/* Attachments feature removed */}
 
