@@ -4,33 +4,16 @@ import { useState, useEffect, useRef } from "react"
 import { Bot, ArrowUp, Square, Trash2, RotateCcw, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { MarkdownRenderer } from "@/components/ui/custom/markdown-renderer"
+import { ChatBubble, ThinkingIndicator } from "@/components/ai/chat-bubble"
 import { cn } from "@/lib/utils"
 import { useTaskAiChat } from "@/hooks/use-task-ai-chat"
-import type { AiChatMessage, Task } from "@tasktrove/types/core"
+import type { Task } from "@tasktrove/types/core"
 
 const DEFAULT_START_PROMPT = "Help me get started on this task."
 
 interface TaskAiChatProps {
   task: Task
   className?: string
-}
-
-function ChatBubble({ message }: { message: AiChatMessage }) {
-  if (message.role === "user") {
-    return (
-      <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-lg bg-primary/10 px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-words">
-          {message.content}
-        </div>
-      </div>
-    )
-  }
-  return (
-    <MarkdownRenderer className="text-sm text-foreground break-words">
-      {message.content}
-    </MarkdownRenderer>
-  )
 }
 
 export function TaskAiChat({ task, className }: TaskAiChatProps) {
@@ -140,19 +123,18 @@ export function TaskAiChat({ task, className }: TaskAiChatProps) {
           data-testid="ai-chat-messages"
         >
           {history.map((message, index) => (
-            <ChatBubble key={index} message={message} />
+            <ChatBubble key={index} role={message.role} content={message.content} />
           ))}
 
-          {state.status !== "idle" && <ChatBubble message={state.pending} />}
+          {state.status !== "idle" && (
+            <ChatBubble role={state.pending.role} content={state.pending.content} />
+          )}
 
           {state.status === "streaming" &&
             (state.output ? (
-              <ChatBubble message={{ role: "assistant", content: state.output }} />
+              <ChatBubble role="assistant" content={state.output} />
             ) : (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="inline-block size-1.5 rounded-full bg-primary animate-pulse" />
-                Thinking...
-              </div>
+              <ThinkingIndicator />
             ))}
 
           {state.status === "error" && (

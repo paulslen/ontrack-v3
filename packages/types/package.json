@@ -65,7 +65,8 @@
       "pro": "./src/reward-levels.pro.ts",
       "default": "./src/reward-levels.ts"
     },
-    "./schema-version": "./src/schema-version.ts"
+    "./schema-version": "./src/schema-version.ts",
+    "./assistant": "./src/assistant.ts"
   },
   "scripts": {
     "lint": "eslint .",

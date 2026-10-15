@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { TaskSidePanel } from "@/components/task/task-side-panel"
+import { MasterAssistantPanel } from "@/components/assistant/master-assistant-panel"
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,10 +11,10 @@ import {
   type ResizablePanelGroupHandle,
 } from "@/components/ui/resizable"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useAssistantPanel } from "@/hooks/use-assistant-panel"
 import { cn } from "@/lib/utils"
-import { selectedTaskAtom } from "@tasktrove/atoms/ui/selection"
+import { assistantPanelWidthAtom } from "@tasktrove/atoms/ui/assistant"
 import {
-  currentViewStateAtom,
   setViewOptionsAtom,
   sidePanelWidthAtom,
   updateGlobalViewOptionsAtom,
@@ -31,7 +32,8 @@ type SidePanelLayoutProps = {
 }
 
 /**
- * Shared layout wrapper that adds the resizable task side panel to any task-centric view.
+ * Shared layout wrapper that adds the resizable side panel to any task-centric view.
+ * The panel shows the open task's details, or the master assistant when no task is open.
  * Centralizing this logic ensures consistent interactions across list, calendar, and kanban views.
  */
 export function TaskViewSidePanelLayout({
@@ -40,16 +42,18 @@ export function TaskViewSidePanelLayout({
   contentWrapperClassName,
   applyContentPadding = false,
 }: SidePanelLayoutProps) {
-  const { showSidePanel } = useAtomValue(currentViewStateAtom)
-  const selectedTask = useAtomValue(selectedTaskAtom)
-  const sidePanelWidth = useAtomValue(sidePanelWidthAtom)
+  const { isTaskPanelOpen, isAssistantOpen } = useAssistantPanel()
+  const taskPanelWidth = useAtomValue(sidePanelWidthAtom)
+  const assistantPanelWidth = useAtomValue(assistantPanelWidthAtom)
+  const setAssistantPanelWidth = useSetAtom(assistantPanelWidthAtom)
   const updateGlobalViewOptions = useSetAtom(updateGlobalViewOptionsAtom)
   const setViewOptions = useSetAtom(setViewOptionsAtom)
   const isMobile = useIsMobile()
   const panelGroupRef = useRef<ResizablePanelGroupHandle | null>(null)
 
-  // Panel is open only when the user wants it visible AND there is a selected task
-  const isPanelOpen = showSidePanel && Boolean(selectedTask)
+  const isPanelOpen = isTaskPanelOpen || isAssistantOpen
+  // Each panel keeps its own width so resizing one doesn't resize the other
+  const sidePanelWidth = isTaskPanelOpen ? taskPanelWidth : assistantPanelWidth
 
   // Update panel layout when panel state or width changes (desktop only)
   useEffect(() => {
@@ -95,15 +99,19 @@ export function TaskViewSidePanelLayout({
   const handlePanelResize = useCallback(
     (sizes: number[]) => {
       if (!isPanelOpen) return
-      if (sizes.length >= 2 && sizes[1] !== undefined) {
-        updateGlobalViewOptions({ sidePanelWidth: sizes[1] })
+      const panelSize = sizes[1]
+      if (panelSize === undefined) return
+      if (isTaskPanelOpen) {
+        updateGlobalViewOptions({ sidePanelWidth: panelSize })
+      } else {
+        setAssistantPanelWidth(panelSize)
       }
     },
-    [isPanelOpen, updateGlobalViewOptions],
+    [isPanelOpen, isTaskPanelOpen, updateGlobalViewOptions, setAssistantPanelWidth],
   )
 
   const renderSidePanel = (variant?: "resizable") => (
-    <TaskSidePanel isOpen={isPanelOpen} onClose={handleClosePanel} variant={variant} />
+    <TaskSidePanel isOpen={isTaskPanelOpen} onClose={handleClosePanel} variant={variant} />
   )
 
   const contentClasses = cn(
@@ -144,7 +152,13 @@ export function TaskViewSidePanelLayout({
           className={cn(!isPanelOpen && "max-w-0 min-w-0 overflow-hidden")}
         >
           <div className="h-full">
-            {isPanelOpen ? renderSidePanel("resizable") : renderSidePanel()}
+            {isAssistantOpen ? (
+              <MasterAssistantPanel />
+            ) : isPanelOpen ? (
+              renderSidePanel("resizable")
+            ) : (
+              renderSidePanel()
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

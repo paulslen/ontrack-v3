@@ -30,6 +30,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ViewOptionsPopover } from "./view-options-popover"
+import { AssistantToggleButton } from "@/components/assistant/assistant-toggle-button"
 import { CommandPalette } from "@/components/search/command-palette"
 import { HelpPopover } from "@/components/ui/help-popover"
 import { getHelpContent } from "@/lib/help-content"
@@ -261,6 +262,9 @@ export function PageHeader({
 
           {/* View Options Popover - Uses atoms directly */}
           <ViewOptionsPopover onAdvancedSearch={onAdvancedSearch} />
+
+          {/* Master Assistant toggle */}
+          <AssistantToggleButton />
 
           {/* Undo/Redo Buttons - Hidden until properly implemented */}
           {/* <ToolbarUndoRedo /> */}
