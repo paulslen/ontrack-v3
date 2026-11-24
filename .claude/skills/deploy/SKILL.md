@@ -18,7 +18,7 @@ instead of the script, and never print the env file's values.
 ## Steps
 
 1. **Pre-flight (local):**
-   - `git status` must be clean and the branch pushed (the server pulls from `origin`). If not,
+   - `git status` must be clean and the branch pushed (the script refuses otherwise). If not,
      tell the user what is uncommitted/unpushed and stop — the user commits and pushes themselves.
    - Run `pnpm run typecheck` (Node 22 for tests: `PATH=$HOME/.nvm/versions/node/v22.22.2/bin:$PATH`).
      Report failures and ask before deploying anyway.
@@ -26,7 +26,9 @@ instead of the script, and never print the env file's values.
    live app for ~10 seconds).
 3. **Deploy:** `scripts/deploy.sh` (run with a long timeout, ~10 minutes; the Docker build is the
    slow part). The script:
-   - pulls `--ff-only` on the server, builds the new image while the old container keeps serving,
+   - sends the missing commits to the server as a git bundle over SSH (the server has no GitHub
+     access in scripts) and fast-forwards its checkout, then builds the new image while the old
+     container keeps serving,
    - backs up the data directory,
    - swaps containers with the same port, data mount and `--env-file`,
    - verifies `/api/health`, that the container's env matches the env file (hash compare), and that
