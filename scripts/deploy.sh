@@ -154,7 +154,9 @@ fi
 mkdir -p "$BACKUP_DIR"
 backup="$BACKUP_DIR/data-$(date +%Y%m%d-%H%M%S).tar.gz"
 tar czf "$backup" -C "$(dirname "$DATA_DIR")" "$(basename "$DATA_DIR")"
-tar tzf "$backup" | grep -q "data.json" || die "Backup $backup does not contain data.json"
+# List first, then search: piping into `grep -q` can SIGPIPE tar and fail the check under pipefail
+backup_listing="$(tar tzf "$backup")"
+grep -q "data.json" <<<"$backup_listing" || die "Backup $backup does not contain data.json"
 say "Backup: $backup ($(du -h "$backup" | cut -f1))"
 ls -1t "$BACKUP_DIR"/data-*.tar.gz | tail -n +31 | xargs -r rm --
 
