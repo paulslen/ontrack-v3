@@ -47,6 +47,11 @@ const mockProjectData = vi.hoisted(() => {
 vi.mock("jotai", () => mockJotai)
 
 // Mock atom modules to prevent debugLabel assignment errors
+vi.mock("@tasktrove/atoms/ui/assistant", () => ({
+  showAssistantPanelAtom: { debugLabel: "showAssistantPanelAtom" },
+  mobileAssistantOpenAtom: { debugLabel: "mobileAssistantOpenAtom" },
+  assistantPanelWidthAtom: { debugLabel: "assistantPanelWidthAtom" },
+}))
 vi.mock("@/lib/atoms/core/base", () => ({
   tasksAtom: { debugLabel: "tasksAtom" },
   projectsAtom: { debugLabel: "projectsAtom" },

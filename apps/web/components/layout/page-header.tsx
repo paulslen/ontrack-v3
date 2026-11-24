@@ -100,7 +100,7 @@ export function PageHeader({
   const openTaskCount = viewTasks.filter((task) => !task.completed).length
 
   const subtitle = isTodayView
-    ? `${format(new Date(), "EEEE, MMMM d")} · ${t("header.progress", "{{done}} of {{total}} done", { done: todayProgress.done, total: todayProgress.total })}`
+    ? `${format(new Date(), isMobile ? "EEE, MMM d" : "EEEE, MMMM d")} · ${t("header.progress", "{{done}} of {{total}} done", { done: todayProgress.done, total: todayProgress.total })}`
     : openTaskCount === 1
       ? t("header.taskCountOne", "1 task")
       : t("header.taskCount", "{{count}} tasks", { count: openTaskCount })
@@ -132,7 +132,7 @@ export function PageHeader({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-4 min-w-0">
-              <h1 className="flex shrink-0 items-center gap-2.5 text-3xl font-semibold tracking-tight text-foreground leading-tight truncate">
+              <h1 className="flex shrink-0 items-center gap-2.5 text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-tight truncate">
                 {pageInfo.color && (
                   <span
                     className="size-3 shrink-0 rounded-full"
@@ -200,6 +200,9 @@ export function PageHeader({
           <AssistantToggleButton />
         </div>
       </div>
+
+      {/* Mobile: one-tap switch between Today and labels, full header width */}
+      {isMobile && <HeaderQuickNav variant="dots" />}
 
       {/* Command Palette */}
       <CommandPalette

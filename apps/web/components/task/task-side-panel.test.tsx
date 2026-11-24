@@ -249,6 +249,13 @@ interface SubtaskContentProps {
   mode?: string
 }
 
+// The mobile drawer body has its own tests (mobile-task-panel-content.test.tsx)
+vi.mock("./mobile-task-panel-content", () => ({
+  MobileTaskPanelContent: ({ task }: { task: { title: string } }) => (
+    <div data-testid="mobile-task-panel-content">{task.title} body</div>
+  ),
+}))
+
 vi.mock("./subtask-content", () => ({
   SubtaskContent: ({ task, mode }: SubtaskContentProps) => {
     const completed = task.subtasks.filter((s) => s.completed).length
@@ -1046,7 +1053,8 @@ describe("TaskSidePanel", () => {
         const drawerContent = drawerContents[0] // Get the first one (main drawer content)
         expect(drawerContent).toBeInTheDocument()
         expect(drawerContent).toHaveClass(
-          "!max-h-[70vh]",
+          "!h-[88dvh]",
+          "!max-h-[88dvh]",
           "focus:outline-none",
           "[&>div:first-child]:cursor-grab",
           "[&>div:first-child]:active:cursor-grabbing",
@@ -1071,7 +1079,7 @@ describe("TaskSidePanel", () => {
         const drawerHeaders = screen.getAllByTestId("drawer-header")
         const drawerHeader = drawerHeaders[0] // Get the first one (main drawer header)
         expect(drawerHeader).toBeInTheDocument()
-        expect(drawerHeader).toHaveClass("pb-3")
+        expect(drawerHeader).toHaveClass("pb-4")
 
         // Task title should be in the header
         expect(screen.getByText("Test Task")).toBeInTheDocument()
@@ -1214,25 +1222,14 @@ describe("TaskSidePanel", () => {
     })
 
     describe("Shared TaskPanelContent Component", () => {
-      it("renders same content in both mobile and desktop modes", () => {
+      it("renders the compact body on mobile and full sections on desktop", () => {
         // Test mobile
         mockUseIsMobile.mockReturnValue(true)
 
         const { rerender } = render(<TaskSidePanel isOpen={true} onClose={mockOnClose} />)
 
-        // Check that mobile elements are present
-        screen.getByText("Description")
-        screen.getAllByText("Subtasks")
-        screen.getAllByText("Labels")
-        screen.getAllByText("Comments")
-
-        // Check for due date scheduling functionality (shows actual date since task has dueDate)
-        screen.getByText("1/1/2024")
-        screen.getByText("Schedule")
-
-        // Check for priority and project controls (category functionality)
-        screen.getByText("P2")
-        screen.getAllByText(/project/i)
+        // Mobile renders the compact, chat-first drawer body
+        expect(screen.getByTestId("mobile-task-panel-content")).toHaveTextContent("Test Task")
 
         // Switch to desktop
         mockUseIsMobile.mockReturnValue(false)
@@ -1803,10 +1800,10 @@ describe("TaskSidePanel", () => {
 
       render(<TaskSidePanel isOpen={true} onClose={mockOnClose} />)
 
-      // Should show date information in mobile mode too
-      expect(
-        screen.getByText(getBadgeText(taskWithDateTime.dueDate, taskWithDateTime.dueTime)),
-      ).toBeInTheDocument()
+      // Mobile hands the task (with its time) to the drawer body, whose date chip has its own tests
+      expect(screen.getByTestId("mobile-task-panel-content")).toHaveTextContent(
+        taskWithDateTime.title,
+      )
     })
   })
 })

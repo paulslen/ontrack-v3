@@ -12,13 +12,16 @@ interface RescheduleToggleProps {
   onTomorrow: () => void
   todayLabel: string
   tomorrowLabel: string
+  /** Shorter Tomorrow label used on small screens */
+  tomorrowShortLabel: string
   todayAriaLabel: string
   tomorrowAriaLabel: string
   className?: string
 }
 
+// Compact on phones, roomier from `sm` up
 const SEGMENT_CLASS =
-  "h-7 px-3.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+  "h-6 px-2.5 text-xs sm:h-7 sm:px-3.5 sm:text-sm rounded-full font-medium whitespace-nowrap transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
 const ACTIVE_SEGMENT_CLASS = "bg-background text-foreground shadow-sm"
 const IDLE_SEGMENT_CLASS =
   "text-foreground/60 hover:text-foreground hover:bg-background/70 active:scale-95"
@@ -34,6 +37,7 @@ export function RescheduleToggle({
   onTomorrow,
   todayLabel,
   tomorrowLabel,
+  tomorrowShortLabel,
   todayAriaLabel,
   tomorrowAriaLabel,
   className,
@@ -43,6 +47,7 @@ export function RescheduleToggle({
       key: "today",
       action: "set-due-today",
       label: todayLabel,
+      shortLabel: todayLabel,
       ariaLabel: todayAriaLabel,
       active: dueToday,
       onSelect: onToday,
@@ -51,6 +56,7 @@ export function RescheduleToggle({
       key: "tomorrow",
       action: "set-due-tomorrow",
       label: tomorrowLabel,
+      shortLabel: tomorrowShortLabel,
       ariaLabel: tomorrowAriaLabel,
       active: dueTomorrow,
       onSelect: onTomorrow,
@@ -61,7 +67,7 @@ export function RescheduleToggle({
     <div
       role="group"
       className={cn(
-        "inline-flex h-9 items-center rounded-full bg-foreground/[0.06] p-1 dark:bg-foreground/10",
+        "inline-flex h-8 sm:h-9 items-center rounded-full bg-foreground/[0.06] p-1 dark:bg-foreground/10",
         className,
       )}
     >
@@ -81,7 +87,8 @@ export function RescheduleToggle({
             segment.onSelect()
           }}
         >
-          {segment.label}
+          <span className="sm:hidden">{segment.shortLabel}</span>
+          <span className="hidden sm:inline">{segment.label}</span>
         </button>
       ))}
     </div>

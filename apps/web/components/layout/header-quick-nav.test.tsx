@@ -44,10 +44,10 @@ vi.mock("@tasktrove/i18n", () => ({
 import { HeaderQuickNav } from "./header-quick-nav"
 
 // Fresh store per render so the mocked atoms re-read the current mock values
-const renderNav = () =>
+const renderNav = (variant?: "pills" | "dots") =>
   render(
     <Provider>
-      <HeaderQuickNav />
+      <HeaderQuickNav variant={variant} />
     </Provider>,
   )
 
@@ -89,5 +89,29 @@ describe("HeaderQuickNav", () => {
     renderNav()
 
     expect(screen.getAllByRole("link")).toHaveLength(1)
+  })
+
+  describe("dots variant (mobile)", () => {
+    it("shows Today and every label, including the current page, named for screen readers", () => {
+      mockAtoms.labels = [
+        { id: LABEL_ID_1, name: "Work", slug: "work", color: "#ff0000" },
+        { id: LABEL_ID_2, name: "Home", slug: "home", color: "#00ff00" },
+      ]
+      mockAtoms.pathname = "/today"
+      renderNav("dots")
+
+      expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/today")
+      expect(screen.getByRole("link", { name: "Work" })).toHaveAttribute("href", "/labels/work")
+      expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/labels/home")
+    })
+
+    it("marks the current page", () => {
+      mockAtoms.labels = [{ id: LABEL_ID_1, name: "Work", slug: "work", color: "#ff0000" }]
+      mockAtoms.pathname = "/labels/work"
+      renderNav("dots")
+
+      expect(screen.getByRole("link", { name: "Work" })).toHaveAttribute("aria-current", "page")
+      expect(screen.getByRole("link", { name: "Today" })).not.toHaveAttribute("aria-current")
+    })
   })
 })

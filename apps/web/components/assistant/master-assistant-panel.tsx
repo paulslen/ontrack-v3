@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useSetAtom } from "jotai"
 import { ArrowUp, Trash2, X, Check, Sparkles, Sun, AlarmClock, ArrowRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ChatBubble, ThinkingIndicator } from "@/components/ai/chat-bubble"
 import { cn } from "@/lib/utils"
 import { useMasterAssistant } from "@/hooks/use-master-assistant"
-import { ASSISTANT_INPUT_ID } from "@/hooks/use-assistant-panel"
-import { showAssistantPanelAtom } from "@tasktrove/atoms/ui/assistant"
+import { ASSISTANT_INPUT_ID, useAssistantPanel } from "@/hooks/use-assistant-panel"
 import { ActionProposalCard } from "./action-proposal-card"
 
 interface StarterPrompt {
@@ -57,7 +55,7 @@ export function MasterAssistantPanel({ className }: MasterAssistantPanelProps) {
     clear,
     dismissError,
   } = useMasterAssistant()
-  const setShowAssistant = useSetAtom(showAssistantPanelAtom)
+  const { isMobile, setAssistantOpen } = useAssistantPanel()
   const [draft, setDraft] = useState("")
   const [confirmingClear, setConfirmingClear] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -66,10 +64,11 @@ export function MasterAssistantPanel({ className }: MasterAssistantPanelProps) {
   const liveText = live?.text ?? ""
   const lastPendingId = pendingActions[pendingActions.length - 1]?.toolUseId
 
-  // Ready to type the moment the panel opens
+  // Ready to type the moment the panel opens (not on phones, where the keyboard would cover the
+  // starter prompts)
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (!isMobile) inputRef.current?.focus()
+  }, [isMobile])
 
   // Keep the newest message in view as replies stream in
   useEffect(() => {
@@ -148,7 +147,7 @@ export function MasterAssistantPanel({ className }: MasterAssistantPanelProps) {
           size="icon"
           variant="ghost"
           className={ROUND_ICON_BUTTON}
-          onClick={() => setShowAssistant(false)}
+          onClick={() => setAssistantOpen(false)}
           title="Hide assistant"
         >
           <X className="size-5" />
@@ -158,7 +157,7 @@ export function MasterAssistantPanel({ className }: MasterAssistantPanelProps) {
 
       {/* Conversation */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-6 py-6 space-y-6">
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-6 space-y-6">
           {isLoading && <ThinkingIndicator label="Loading..." />}
 
           {isEmpty && (

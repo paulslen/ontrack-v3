@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { useSetAtom } from "jotai"
 import { TaskSidePanel } from "@/components/task/task-side-panel"
 import { MasterAssistantPanel } from "@/components/assistant/master-assistant-panel"
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/custom/drawer"
 import {
   ResizableHandle,
   ResizablePanel,
@@ -41,7 +42,7 @@ export function TaskViewSidePanelLayout({
   contentWrapperClassName,
   applyContentPadding = false,
 }: SidePanelLayoutProps) {
-  const { isTaskPanelOpen, isAssistantOpen } = useAssistantPanel()
+  const { isTaskPanelOpen, isAssistantOpen, setAssistantOpen } = useAssistantPanel()
   const setViewOptions = useSetAtom(setViewOptionsAtom)
   const isMobile = useIsMobile()
   const panelGroupRef = useRef<ResizablePanelGroupHandle | null>(null)
@@ -106,6 +107,23 @@ export function TaskViewSidePanelLayout({
       <div className={cn("flex flex-1 relative h-full", rootClassName)}>
         <div className={contentClasses}>{children}</div>
         {renderSidePanel()}
+        {/* Assistant as a near-full-height sheet; its composer stays pinned to the bottom */}
+        <Drawer
+          open={isAssistantOpen}
+          onOpenChange={(open) => {
+            if (!open) setAssistantOpen(false)
+          }}
+          direction="bottom"
+        >
+          <DrawerContent
+            className="h-[92dvh] !max-h-[92dvh] rounded-t-3xl focus:outline-none"
+            thinHandle
+            data-testid="assistant-sheet"
+          >
+            <DrawerTitle className="sr-only">Assistant</DrawerTitle>
+            {isAssistantOpen && <MasterAssistantPanel className="flex-1 min-h-0 border-l-0" />}
+          </DrawerContent>
+        </Drawer>
       </div>
     )
   }

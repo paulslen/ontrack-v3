@@ -24,9 +24,18 @@ vi.mock("@/hooks/use-master-assistant", () => ({
   }),
 }))
 
+const setAssistantOpen = vi.fn<(open: boolean) => void>()
+let isMobile = false
+
+vi.mock("@/hooks/use-assistant-panel", () => ({
+  ASSISTANT_INPUT_ID: "master-assistant-input",
+  useAssistantPanel: () => ({ isMobile, setAssistantOpen }),
+}))
+
 describe("MasterAssistantPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    isMobile = false
     state = {
       items: [],
       isLoading: false,
@@ -53,6 +62,21 @@ describe("MasterAssistantPanel", () => {
     render(<MasterAssistantPanel />)
 
     expect(screen.getByLabelText("Message the assistant")).toHaveFocus()
+  })
+
+  it("doesn't focus the message box on mobile, so the keyboard doesn't cover the chips", () => {
+    isMobile = true
+    render(<MasterAssistantPanel />)
+
+    expect(screen.getByLabelText("Message the assistant")).not.toHaveFocus()
+  })
+
+  it("closes through the shared assistant panel state", () => {
+    render(<MasterAssistantPanel />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide assistant" }))
+
+    expect(setAssistantOpen).toHaveBeenCalledWith(false)
   })
 
   it("sends on Enter and keeps a newline on Shift+Enter", () => {

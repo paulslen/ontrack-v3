@@ -16,16 +16,19 @@ const setShowAssistant = vi.fn<(value: boolean) => void>()
 const closeTaskPanel = vi.fn<() => void>()
 const focusAssistantInput = vi.fn<() => void>()
 
-let panel = { isAvailable: true, isAssistantOpen: false, isTaskPanelOpen: false }
+const DEFAULT_PANEL = {
+  isAvailable: true,
+  isAssistantOpen: false,
+  isTaskPanelOpen: false,
+  isMobile: false,
+  setAssistantOpen: (value: boolean) => setShowAssistant(value),
+}
+let panel = { ...DEFAULT_PANEL }
 
 vi.mock("@/hooks/use-assistant-panel", () => ({
   ASSISTANT_INPUT_ID: "master-assistant-input",
   focusAssistantInput: () => focusAssistantInput(),
   useAssistantPanel: () => panel,
-}))
-
-vi.mock("@tasktrove/atoms/ui/assistant", () => ({
-  showAssistantPanelAtom: { debugLabel: "showAssistantPanelAtom" },
 }))
 
 vi.mock("@tasktrove/atoms/ui/views", () => ({
@@ -36,8 +39,7 @@ vi.mock("jotai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("jotai")>()
   return {
     ...actual,
-    useSetAtom: (atom: { debugLabel?: string }) =>
-      atom.debugLabel === "showAssistantPanelAtom" ? setShowAssistant : closeTaskPanel,
+    useSetAtom: () => closeTaskPanel,
   }
 })
 
@@ -48,7 +50,18 @@ const pressCmdJ = (): void => {
 describe("AssistantToggleButton", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    panel = { isAvailable: true, isAssistantOpen: false, isTaskPanelOpen: false }
+    panel = { ...DEFAULT_PANEL }
+  })
+
+  it("on mobile, shows an icon-only sparkle button that opens the assistant sheet", () => {
+    panel = { ...panel, isMobile: true }
+    renderButton()
+
+    const button = screen.getByRole("button", { name: "Ask AI" })
+    expect(button).not.toHaveTextContent("Ask AI")
+    fireEvent.click(button)
+
+    expect(setShowAssistant).toHaveBeenCalledWith(true)
   })
 
   it("renders nothing when AI is unavailable", () => {

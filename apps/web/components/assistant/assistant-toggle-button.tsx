@@ -10,23 +10,25 @@ import {
   focusAssistantInput,
   useAssistantPanel,
 } from "@/hooks/use-assistant-panel"
-import { showAssistantPanelAtom } from "@tasktrove/atoms/ui/assistant"
 import { resetSidePanelStateAtom } from "@tasktrove/atoms/ui/views"
 
-/** Header "Ask AI" pill that shows or hides the master assistant panel (also ⌘J / Ctrl+J) */
+/**
+ * Header "Ask AI" pill that shows or hides the master assistant panel (also ⌘J / Ctrl+J).
+ * On phones it is an icon-only sparkle button that opens the assistant sheet.
+ */
 export function AssistantToggleButton() {
-  const { isAvailable, isAssistantOpen, isTaskPanelOpen } = useAssistantPanel()
-  const setShowAssistant = useSetAtom(showAssistantPanelAtom)
+  const { isAvailable, isAssistantOpen, isTaskPanelOpen, isMobile, setAssistantOpen } =
+    useAssistantPanel()
   const closeTaskPanel = useSetAtom(resetSidePanelStateAtom)
 
   const open = (): void => {
-    setShowAssistant(true)
+    setAssistantOpen(true)
     // The assistant shares the side panel with task details, so make room for it
     if (isTaskPanelOpen) closeTaskPanel()
   }
 
   const handleClick = (): void => {
-    if (isAssistantOpen) setShowAssistant(false)
+    if (isAssistantOpen) setAssistantOpen(false)
     else open()
   }
 
@@ -37,7 +39,7 @@ export function AssistantToggleButton() {
       open()
       return
     }
-    if (document.activeElement?.id === ASSISTANT_INPUT_ID) setShowAssistant(false)
+    if (document.activeElement?.id === ASSISTANT_INPUT_ID) setAssistantOpen(false)
     else focusAssistantInput()
   }
 
@@ -54,6 +56,20 @@ export function AssistantToggleButton() {
   }, [isAvailable])
 
   if (!isAvailable) return null
+
+  if (isMobile) {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        className="inline-flex size-10 items-center justify-center rounded-full bg-foreground text-background shadow-sm transition-transform active:scale-95 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        aria-label="Ask AI"
+        aria-pressed={isAssistantOpen}
+      >
+        <Sparkles className="size-[1.125rem]" />
+      </button>
+    )
+  }
 
   return (
     <Tooltip delayDuration={300}>

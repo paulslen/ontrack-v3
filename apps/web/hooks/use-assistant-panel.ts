@@ -1,8 +1,8 @@
 "use client"
 
-import { useAtomValue } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import { settingsAtom } from "@tasktrove/atoms/data/base/atoms"
-import { showAssistantPanelAtom } from "@tasktrove/atoms/ui/assistant"
+import { mobileAssistantOpenAtom, showAssistantPanelAtom } from "@tasktrove/atoms/ui/assistant"
 import { selectedTaskAtom } from "@tasktrove/atoms/ui/selection"
 import { currentViewStateAtom } from "@tasktrove/atoms/ui/views"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -17,20 +17,23 @@ export function focusAssistantInput(): void {
 }
 
 /**
- * Which right-hand panel a task view shows. An open task takes precedence;
- * otherwise the master assistant shows, unless the user hid it.
+ * Which panel a task view shows. An open task takes precedence; otherwise the master
+ * assistant shows, unless the user hid it. Desktop shows it as a side panel (remembered
+ * across visits); mobile as a bottom sheet that only opens on request.
  */
 export function useAssistantPanel() {
   const settings = useAtomValue(settingsAtom)
-  const showAssistant = useAtomValue(showAssistantPanelAtom)
+  const [showAssistant, setShowAssistant] = useAtom(showAssistantPanelAtom)
+  const [mobileAssistantOpen, setMobileAssistantOpen] = useAtom(mobileAssistantOpenAtom)
   const { showSidePanel } = useAtomValue(currentViewStateAtom)
   const selectedTask = useAtomValue(selectedTaskAtom)
   const isMobile = useIsMobile()
 
   const isTaskPanelOpen = showSidePanel && Boolean(selectedTask)
-  // Desktop only for now: a half-screen panel doesn't fit on a phone
-  const isAvailable = settings.ai.enabled && Boolean(settings.ai.apiKey) && !isMobile
-  const isAssistantOpen = isAvailable && showAssistant && !isTaskPanelOpen
+  const isAvailable = settings.ai.enabled && Boolean(settings.ai.apiKey)
+  const wantsAssistant = isMobile ? mobileAssistantOpen : showAssistant
+  const isAssistantOpen = isAvailable && wantsAssistant && !isTaskPanelOpen
+  const setAssistantOpen = isMobile ? setMobileAssistantOpen : setShowAssistant
 
-  return { isAvailable, isAssistantOpen, isTaskPanelOpen }
+  return { isAvailable, isAssistantOpen, isTaskPanelOpen, isMobile, setAssistantOpen }
 }

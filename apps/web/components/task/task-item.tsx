@@ -1477,7 +1477,7 @@ export function TaskItem({
       data-task-focused={isSelected}
       data-task-id={task.id}
     >
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-start gap-3 sm:items-center sm:gap-4">
         <TaskCheckbox
           checked={task.completed}
           onCheckedChange={() => toggleTask(task.id)}
@@ -1488,7 +1488,15 @@ export function TaskItem({
           data-action="toggle"
         />
 
-        <div className="flex-1 min-w-0">
+        {/* Phones: title on its own line, meta + compact Today|Tmrw below.
+            sm+: title and meta on the left, actions centered on the right. */}
+        <div
+          className={cn(
+            "flex-1 min-w-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4",
+            "[grid-template-areas:'title_title'_'meta_actions']",
+            "sm:[grid-template-areas:'title_actions'_'meta_actions']",
+          )}
+        >
           <LinkifiedEditableDiv
             as="h3"
             value={task.title}
@@ -1499,7 +1507,7 @@ export function TaskItem({
             }}
             onEditingChange={setIsTitleEditing}
             className={cn(
-              "font-medium text-[1.0625rem] leading-snug w-fit max-w-full",
+              "[grid-area:title] self-end font-medium text-[1.0625rem] leading-snug w-fit max-w-full",
               !isTitleEditing && "line-clamp-2",
               task.completed
                 ? "line-through text-muted-foreground"
@@ -1513,7 +1521,7 @@ export function TaskItem({
 
           {/* Quiet meta line - only what carries information */}
           {hasMeta && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <div className="[grid-area:meta] self-center sm:self-start min-w-0 mt-1.5 sm:mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               {showScheduleMeta && (
                 <TaskSchedulePopover taskId={task.id}>
                   <TaskScheduleTrigger
@@ -1569,38 +1577,44 @@ export function TaskItem({
               )}
             </div>
           )}
-        </div>
 
-        {/* Primary actions - always visible */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {!isCompleted && (
-            <RescheduleToggle
-              dueToday={dueToday}
-              dueTomorrow={dueTomorrow}
-              onToday={() => updateTask({ updateRequest: { id: task.id, dueDate: new Date() } })}
-              onTomorrow={() =>
-                updateTask({ updateRequest: { id: task.id, dueDate: addDays(new Date(), 1) } })
-              }
-              todayLabel={t("actions.today", "Today")}
-              tomorrowLabel={t("actions.tomorrow", "Tomorrow")}
-              todayAriaLabel={t("actions.setDueToday", "Set due date to today")}
-              tomorrowAriaLabel={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
-            />
-          )}
-          {shouldShowActionsMenu && (
-            <TaskActionsMenu
-              task={task}
-              isVisible={true}
-              onDeleteClick={() => deleteTask(task.id)}
-              onSelectClick={() => toggleTaskSelection(taskId)}
-              onArchiveToggle={handleArchiveToggle}
-              onEstimationClick={hasEstimation ? undefined : handleEstimationMenuClick}
-              onStartFocusTimerClick={activeFocusTimer ? undefined : () => startFocusTimer(task.id)}
-              isSubTask={false}
-              open={actionsMenuOpen}
-              onOpenChange={handleActionsMenuChange}
-            />
-          )}
+          {/* Primary actions - always visible */}
+          <div className="[grid-area:actions] mt-1.5 sm:mt-0 flex items-center justify-end gap-1.5 flex-shrink-0">
+            {!isCompleted && (
+              <RescheduleToggle
+                dueToday={dueToday}
+                dueTomorrow={dueTomorrow}
+                onToday={() => updateTask({ updateRequest: { id: task.id, dueDate: new Date() } })}
+                onTomorrow={() =>
+                  updateTask({ updateRequest: { id: task.id, dueDate: addDays(new Date(), 1) } })
+                }
+                todayLabel={t("actions.today", "Today")}
+                tomorrowLabel={t("actions.tomorrow", "Tomorrow")}
+                tomorrowShortLabel={t("actions.tomorrowShort", "Tmrw")}
+                todayAriaLabel={t("actions.setDueToday", "Set due date to today")}
+                tomorrowAriaLabel={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
+              />
+            )}
+            {/* Phones open the task drawer by tapping the row instead */}
+            {shouldShowActionsMenu && (
+              <div className="hidden sm:flex">
+                <TaskActionsMenu
+                  task={task}
+                  isVisible={true}
+                  onDeleteClick={() => deleteTask(task.id)}
+                  onSelectClick={() => toggleTaskSelection(taskId)}
+                  onArchiveToggle={handleArchiveToggle}
+                  onEstimationClick={hasEstimation ? undefined : handleEstimationMenuClick}
+                  onStartFocusTimerClick={
+                    activeFocusTimer ? undefined : () => startFocusTimer(task.id)
+                  }
+                  isSubTask={false}
+                  open={actionsMenuOpen}
+                  onOpenChange={handleActionsMenuChange}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

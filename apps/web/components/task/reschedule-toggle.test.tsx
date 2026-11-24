@@ -16,6 +16,7 @@ const renderToggle = (overrides: Partial<React.ComponentProps<typeof RescheduleT
         onTomorrow={onTomorrow}
         todayLabel="Today"
         tomorrowLabel="Tomorrow"
+        tomorrowShortLabel="Tmrw"
         todayAriaLabel="Set due date to today"
         tomorrowAriaLabel="Defer due date to tomorrow"
         {...overrides}
@@ -34,6 +35,15 @@ describe("RescheduleToggle", () => {
     expect(screen.getByRole("button", { name: "Defer due date to tomorrow" })).toHaveTextContent(
       "Tomorrow",
     )
+  })
+
+  it("renders the short Tomorrow label for small screens alongside the full one", () => {
+    renderToggle()
+
+    const tomorrow = screen.getByRole("button", { name: "Defer due date to tomorrow" })
+    expect(screen.getByText("Tmrw")).toHaveClass("sm:hidden")
+    expect(tomorrow).toContainElement(screen.getByText("Tmrw"))
+    expect(screen.getByText("Tomorrow")).toHaveClass("hidden", "sm:inline")
   })
 
   it("calls the matching handler without triggering the row click", async () => {

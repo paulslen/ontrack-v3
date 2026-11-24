@@ -27,6 +27,7 @@ import { TaskActionsMenu } from "./task-actions-menu"
 import { TaskCompletionHistory } from "@/components/task/task-completion-history"
 import { TaskDebugBadge } from "@/components/debug"
 import { TaskAiChat } from "./task-ai-chat"
+import { MobileTaskPanelContent } from "./mobile-task-panel-content"
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback"
 import { updateTaskAtom, deleteTaskAtom, toggleTaskAtom } from "@tasktrove/atoms/core/tasks"
 import { projectsAtom } from "@tasktrove/atoms/data/base/atoms"
@@ -358,8 +359,6 @@ interface TaskSidePanelProps {
 export function TaskSidePanel({ isOpen, onClose, variant = "overlay" }: TaskSidePanelProps) {
   const isMobile = useIsMobile()
   const [isAutoSaving, setIsAutoSaving] = useState(false)
-  const mobileSnapPoints = [0.9, 1]
-  const [activeSnapPoint, setActiveSnapPoint] = useState<number | string | null>(0.9)
   const { t } = useTranslation("task")
 
   // Atom actions
@@ -478,59 +477,39 @@ export function TaskSidePanel({ isOpen, onClose, variant = "overlay" }: TaskSide
 
   // Mobile: Bottom drawer
   if (isMobile) {
-    const isFullyExpanded = activeSnapPoint === 1
-
     return (
-      <Drawer
-        open={isOpen}
-        onOpenChange={() => onClose()}
-        direction="bottom"
-        snapPoints={mobileSnapPoints}
-        activeSnapPoint={activeSnapPoint}
-        setActiveSnapPoint={setActiveSnapPoint}
-        // Keep overlay visible even at the initial snap point
-        fadeFromIndex={0}
-      >
+      <Drawer open={isOpen} onOpenChange={() => onClose()} direction="bottom">
         <DrawerContent
           className={cn(
             "focus:outline-none [&>div:first-child]:cursor-grab [&>div:first-child]:active:cursor-grabbing",
-            isFullyExpanded ? "!max-h-[95vh]" : "!max-h-[70vh]",
+            // Fixed height (no snap points) so the chat fills the drawer and its composer stays on screen
+            "!h-[88dvh] !max-h-[88dvh]",
           )}
           thinHandle={isMobile}
         >
-          <DrawerHeader className={cn("pb-3 text-center", "pt-0")}>
+          <DrawerHeader className="px-5 pt-1 pb-4">
             <DrawerTitle className="sr-only">
               {t("sidePanel.title", "Task Details: {{- title}}", { title: task.title })}
             </DrawerTitle>
-            <div className="flex items-center gap-1">
+            <div className="flex items-start gap-3 text-left">
               <TaskCheckbox
                 checked={task.completed}
                 onCheckedChange={() => toggleTask(task.id)}
-                className="flex-shrink-0"
+                className="mt-1 size-7 flex-shrink-0"
               />
-              <div className="flex-1 flex items-center gap-2 min-w-0 truncate">
+              <div className="flex-1 min-w-0">
                 <EditableDiv
                   data-testid="editable-div"
                   value={task.title}
                   onChange={(value: string) => autoSave({ title: value })}
                   className={cn(
-                    "text-lg font-medium w-fit max-w-xs hover:bg-accent px-2 py-1 rounded min-w-0",
-                    task.completed ? "text-muted-foreground" : "text-foreground",
+                    "text-xl font-semibold leading-snug tracking-tight break-words rounded",
+                    task.completed ? "text-muted-foreground line-through" : "text-foreground",
                   )}
                   placeholder={t("sidePanel.taskTitle.placeholder", "Task title...")}
                 />
-                {/* Favorite feature removed */}
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => focusTask(task.id)}
-                  className="h-8 w-8 flex-shrink-0"
-                  title="Focus on task in list"
-                >
-                  <Crosshair className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-0.5 -mr-2">
                 <TaskActionsMenu
                   task={task}
                   isVisible={true}
@@ -540,27 +519,29 @@ export function TaskSidePanel({ isOpen, onClose, variant = "overlay" }: TaskSide
                   open={actionsMenuOpen}
                   onOpenChange={setActionsMenuOpen}
                 />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="size-10 flex-shrink-0 rounded-full"
+                  aria-label={t("sidePanel.close", "Close")}
+                >
+                  <X className="size-5" />
+                </Button>
               </div>
             </div>
           </DrawerHeader>
 
-          <div
-            className={cn(
-              "flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent",
-              isFullyExpanded ? "" : "pb-2",
-            )}
-          >
-            <div className="p-4">
-              <TaskPanelContent
-                task={task}
-                autoSave={autoSave}
-                onAddComment={handleAddComment}
-                onAddLabel={handleAddLabel}
-                onRemoveLabel={handleRemoveLabel}
-                getTaskProject={getTaskProject}
-                markdownEnabled={settings.general.markdownEnabled}
-              />
-            </div>
+          {/* Body fills the drawer; the AI chat inside scrolls and keeps its composer pinned */}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <MobileTaskPanelContent
+              task={task}
+              autoSave={autoSave}
+              onAddComment={handleAddComment}
+              onAddLabel={handleAddLabel}
+              onRemoveLabel={handleRemoveLabel}
+              markdownEnabled={settings.general.markdownEnabled}
+            />
           </div>
 
           {/* Auto-save indicator for mobile */}
