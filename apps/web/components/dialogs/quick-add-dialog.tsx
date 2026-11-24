@@ -15,7 +15,7 @@ import {
   X,
   Folder,
   Flag,
-  // MoreHorizontal,
+  MoreHorizontal,
   CheckSquare,
   MessageSquare,
   Clock,
@@ -160,6 +160,7 @@ export function QuickAddDialog() {
 
   const shortcutListenersRef = useRef<Set<QuickAddShortcutListener>>(new Set())
   const [keepOpen, setKeepOpen] = useState(false)
+  const [morePillsExpanded, setMorePillsExpanded] = useState(false)
   const registerShortcutListener = useCallback((listener: QuickAddShortcutListener) => {
     shortcutListenersRef.current.add(listener)
     return () => shortcutListenersRef.current.delete(listener)
@@ -464,6 +465,7 @@ export function QuickAddDialog() {
       if (shouldClose) {
         hasInitializedRef.current = false
         setKeepOpen(false)
+        setMorePillsExpanded(false)
         closeDialog()
       } else {
         scheduleReinitialize()
@@ -676,6 +678,13 @@ export function QuickAddDialog() {
     ? t("quickAdd.copyTitle", "Duplicate Task")
     : t("quickAdd.title", "New Task")
 
+  // Less-used fields stay behind "More" unless they already hold a value
+  const hasMoreFieldValues =
+    (newTask.estimation ?? 0) > 0 ||
+    (newTask.subtasks?.length ?? 0) > 0 ||
+    (newTask.comments?.length ?? 0) > 0
+  const showMorePills = morePillsExpanded || hasMoreFieldValues
+
   const pillBaseClass =
     "h-8 rounded-full px-3 bg-background/40 hover:bg-background/60 ring-1 ring-border/50"
 
@@ -684,7 +693,7 @@ export function QuickAddDialog() {
       {/* Main Input Row with Smart Parsing toggle */}
       <div>
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 pb-3">
+          <div className="relative flex-1 pb-3 text-lg">
             <EnhancedHighlightedInput
               placeholder={PLACEHOLDER_TASK_INPUT}
               value={input}
@@ -699,36 +708,48 @@ export function QuickAddDialog() {
               onToggleSection={handleToggleSection}
             />
           </div>
-          {/* Smart Parsing label above compact toggle */}
-          <div className="flex flex-col items-center justify-center pl-1 flex-shrink-0 gap-1">
-            <ContentPopover
-              content={t(
-                "quickAdd.smartParsing.help",
-                "Smart Parsing automatically detects and extracts task details from your input. It can identify priorities (P1-P4), due dates (tomorrow, next week, etc.), project names (#project), labels (@label), and recurring patterns (daily, weekly).",
-              )}
-              side="right"
-              align="center"
-              triggerMode="hover"
-              className="w-64 p-2 text-xs leading-relaxed"
-              triggerClassName="select-none"
+          {/* Smart Parsing settings live in a popover to keep the input row clean */}
+          <ContentPopover
+            content={
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="quick-add-nlp-toggle"
+                    className="text-sm font-medium cursor-pointer select-none"
+                  >
+                    {t("quickAdd.smartParsing.label", "Smart Parsing")}
+                  </label>
+                  <Switch
+                    id="quick-add-nlp-toggle"
+                    checked={nlpEnabled}
+                    onCheckedChange={setNlpEnabled}
+                    data-testid="nlp-toggle"
+                  />
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t(
+                    "quickAdd.smartParsing.help",
+                    "Smart Parsing automatically detects and extracts task details from your input. It can identify priorities (P1-P4), due dates (tomorrow, next week, etc.), project names (#project), labels (@label), and recurring patterns (daily, weekly).",
+                  )}
+                </p>
+              </div>
+            }
+            side="bottom"
+            align="end"
+            triggerMode="click"
+            className="w-72 p-3"
+            triggerClassName="select-none self-start"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("quickAdd.smartParsing.settings", "Smart Parsing settings")}
+              className={cn(nlpEnabled ? "text-foreground" : "text-muted-foreground/60")}
             >
-              <label htmlFor="quick-add-nlp-toggle" className="cursor-pointer select-none">
-                <ScanText className="h-4 w-4" aria-hidden />
-              </label>
-            </ContentPopover>
-            <VisuallyHidden>
-              <label htmlFor="quick-add-nlp-toggle">
-                {t("quickAdd.smartParsing.label", "Smart Parsing")}
-              </label>
-            </VisuallyHidden>
-            <Switch
-              id="quick-add-nlp-toggle"
-              checked={nlpEnabled}
-              onCheckedChange={setNlpEnabled}
-              className="scale-75"
-              data-testid="nlp-toggle"
-            />
-          </div>
+              <ScanText className="h-4 w-4" aria-hidden />
+            </Button>
+          </ContentPopover>
         </div>
 
         {/* Description */}
@@ -756,7 +777,6 @@ export function QuickAddDialog() {
                   completed={false}
                   variant="button"
                   fallbackLabel={t("quickAdd.buttons.date", "Date")}
-                  showLabel={false}
                 />
               }
               label={null}
@@ -773,7 +793,7 @@ export function QuickAddDialog() {
           >
             <PillActionButton
               icon={<Flag className="h-3 w-3 flex-shrink-0" />}
-              label={null}
+              label={t("quickAdd.buttons.priority", "Priority")}
               display={
                 newTask.priority && newTask.priority < 4 ? `P${newTask.priority}` : undefined
               }
@@ -791,9 +811,11 @@ export function QuickAddDialog() {
           <LabelManagementPopover onAddLabel={handleAddLabel} onRemoveLabel={handleRemoveLabel}>
             <PillActionButton
               icon={<Tag className="h-3 w-3 flex-shrink-0" />}
-              label={null}
+              label={t("quickAdd.buttons.labels", "Labels")}
               display={
-                newTask.labels && newTask.labels.length > 0 ? `${newTask.labels.length}` : undefined
+                newTask.labels && newTask.labels.length > 0
+                  ? `${t("quickAdd.buttons.labels", "Labels")} · ${newTask.labels.length}`
+                  : undefined
               }
               ariaLabel={t("quickAdd.buttons.label", "Label")}
               className={cn(
@@ -826,7 +848,7 @@ export function QuickAddDialog() {
                       style={{ color: project?.color || undefined }}
                     />
                   }
-                  label={null}
+                  label={t("quickAdd.buttons.project", "Project")}
                   display={valueText}
                   ariaLabel={t("quickAdd.buttons.project", "Project")}
                   className={cn(pillBaseClass, "text-muted-foreground")}
@@ -836,79 +858,94 @@ export function QuickAddDialog() {
             })()}
           </ProjectPopover>
 
-          {/* Estimation */}
-          <TimeEstimationPopover
-            value={newTask.estimation || 0}
-            onChange={(seconds) => updateNewTask({ updateRequest: { estimation: seconds || 0 } })}
-          >
-            <PillActionButton
-              icon={<Clock className="h-3 w-3 flex-shrink-0" />}
-              label={null}
-              display={
-                newTask.estimation && newTask.estimation > 0
-                  ? formatTime(newTask.estimation)
-                  : undefined
-              }
-              ariaLabel={t("quickAdd.buttons.estimation", "Estimate")}
-              className={cn(
-                pillBaseClass,
-                newTask.estimation && newTask.estimation > 0
-                  ? "text-foreground"
-                  : "text-muted-foreground",
-              )}
-            />
-          </TimeEstimationPopover>
+          {showMorePills ? (
+            <>
+              {/* Estimation */}
+              <TimeEstimationPopover
+                value={newTask.estimation || 0}
+                onChange={(seconds) =>
+                  updateNewTask({ updateRequest: { estimation: seconds || 0 } })
+                }
+              >
+                <PillActionButton
+                  icon={<Clock className="h-3 w-3 flex-shrink-0" />}
+                  label={null}
+                  display={
+                    newTask.estimation && newTask.estimation > 0
+                      ? formatTime(newTask.estimation)
+                      : undefined
+                  }
+                  ariaLabel={t("quickAdd.buttons.estimation", "Estimate")}
+                  className={cn(
+                    pillBaseClass,
+                    newTask.estimation && newTask.estimation > 0
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                />
+              </TimeEstimationPopover>
 
-          {/* People */}
-          <PeopleManagementPopover onOpenChange={() => {}}>
+              {/* People */}
+              <PeopleManagementPopover onOpenChange={() => {}}>
+                <PillActionButton
+                  icon={<Users className="h-3 w-3 flex-shrink-0" />}
+                  label={null}
+                  display={<AssigneeBadges />}
+                  ariaLabel={t("quickAdd.buttons.assign", "Assign")}
+                  className={cn(pillBaseClass, "text-muted-foreground")}
+                />
+              </PeopleManagementPopover>
+
+              {/* Subtasks */}
+              <SubtaskPopover onOpenChange={() => {}}>
+                <PillActionButton
+                  icon={<CheckSquare className="h-3 w-3 flex-shrink-0" />}
+                  label={null}
+                  display={
+                    newTask.subtasks && newTask.subtasks.length > 0
+                      ? `${newTask.subtasks.length}`
+                      : undefined
+                  }
+                  ariaLabel={t("quickAdd.buttons.subtasks", "Subtasks")}
+                  className={cn(
+                    pillBaseClass,
+                    newTask.subtasks && newTask.subtasks.length > 0
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground",
+                  )}
+                />
+              </SubtaskPopover>
+
+              {/* Comments */}
+              <CommentManagementPopover onOpenChange={() => {}}>
+                <PillActionButton
+                  icon={<MessageSquare className="h-3 w-3 flex-shrink-0" />}
+                  label={null}
+                  display={
+                    newTask.comments && newTask.comments.length > 0
+                      ? `${newTask.comments.length}`
+                      : undefined
+                  }
+                  ariaLabel={t("quickAdd.buttons.comments", "Comments")}
+                  className={cn(
+                    pillBaseClass,
+                    newTask.comments && newTask.comments.length > 0
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground",
+                  )}
+                />
+              </CommentManagementPopover>
+            </>
+          ) : (
             <PillActionButton
-              icon={<Users className="h-3 w-3 flex-shrink-0" />}
-              label={null}
-              display={<AssigneeBadges />}
-              ariaLabel={t("quickAdd.buttons.assign", "Assign")}
+              icon={<MoreHorizontal className="h-3 w-3 flex-shrink-0" />}
+              label={t("quickAdd.buttons.more", "More")}
+              ariaLabel={t("quickAdd.buttons.more", "More")}
               className={cn(pillBaseClass, "text-muted-foreground")}
+              onClick={() => setMorePillsExpanded(true)}
+              data-testid="quick-add-more-pills"
             />
-          </PeopleManagementPopover>
-
-          {/* Subtasks */}
-          <SubtaskPopover onOpenChange={() => {}}>
-            <PillActionButton
-              icon={<CheckSquare className="h-3 w-3 flex-shrink-0" />}
-              label={null}
-              display={
-                newTask.subtasks && newTask.subtasks.length > 0
-                  ? `${newTask.subtasks.length}`
-                  : undefined
-              }
-              ariaLabel={t("quickAdd.buttons.subtasks", "Subtasks")}
-              className={cn(
-                pillBaseClass,
-                newTask.subtasks && newTask.subtasks.length > 0
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground",
-              )}
-            />
-          </SubtaskPopover>
-
-          {/* Comments */}
-          <CommentManagementPopover onOpenChange={() => {}}>
-            <PillActionButton
-              icon={<MessageSquare className="h-3 w-3 flex-shrink-0" />}
-              label={null}
-              display={
-                newTask.comments && newTask.comments.length > 0
-                  ? `${newTask.comments.length}`
-                  : undefined
-              }
-              ariaLabel={t("quickAdd.buttons.comments", "Comments")}
-              className={cn(
-                pillBaseClass,
-                newTask.comments && newTask.comments.length > 0
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground",
-              )}
-            />
-          </CommentManagementPopover>
+          )}
         </div>
 
         {/* NLP Toggle moved next to title input above */}
@@ -959,9 +996,6 @@ export function QuickAddDialog() {
           triggerClassName="select-none"
         >
           <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
-            <label htmlFor="quick-add-keep-open" className="cursor-pointer select-none">
-              <CopyPlus className="h-4 w-4" aria-hidden />
-            </label>
             <Switch
               id="quick-add-keep-open"
               checked={keepOpen}
@@ -969,6 +1003,13 @@ export function QuickAddDialog() {
               className="scale-90"
               aria-label={t("quickAdd.keepOpen.label", "Add another")}
             />
+            <label
+              htmlFor="quick-add-keep-open"
+              className="flex items-center gap-1 cursor-pointer select-none"
+            >
+              <CopyPlus className="h-4 w-4" aria-hidden />
+              {t("quickAdd.keepOpen.label", "Add another")}
+            </label>
           </div>
         </ContentPopover>
         <Button variant="ghost" onClick={handleCloseDialog} className="text-xs sm:text-sm">

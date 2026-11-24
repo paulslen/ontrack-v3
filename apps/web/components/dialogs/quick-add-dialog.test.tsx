@@ -871,7 +871,46 @@ describe("QuickAddDialog", () => {
     const projectButton = screen.getByRole("button", { name: /project/i })
     expect(projectButton).toBeInTheDocument()
     expect(projectButton).toHaveAttribute("aria-label", "Project")
-    expect(projectButton).not.toHaveTextContent("Project")
+    expect(projectButton).toHaveTextContent("Project")
+  })
+
+  it("shows text labels on the primary pills", () => {
+    renderDialog()
+
+    expect(screen.getByRole("button", { name: "Date" })).toHaveTextContent("Date")
+    expect(screen.getByRole("button", { name: "Priority" })).toHaveTextContent("Priority")
+    expect(screen.getByRole("button", { name: "Label" })).toHaveTextContent("Labels")
+  })
+
+  it("keeps less-used pills behind the More button until expanded", () => {
+    renderDialog()
+
+    expect(screen.queryByRole("button", { name: "Estimate" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Subtasks" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Comments" })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId("quick-add-more-pills"))
+
+    expect(screen.getByRole("button", { name: "Estimate" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Subtasks" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Comments" })).toBeInTheDocument()
+    expect(screen.queryByTestId("quick-add-more-pills")).not.toBeInTheDocument()
+  })
+
+  it("puts the Smart Parsing toggle inside its settings popover", () => {
+    renderDialog()
+
+    const trigger = screen.getByRole("button", { name: "Smart Parsing settings" })
+    expect(trigger).toBeInTheDocument()
+    const popover = trigger.closest("[data-testid='popover']")
+    expect(popover).not.toBeNull()
+    expect(popover?.querySelector("[data-testid='nlp-toggle']")).not.toBeNull()
+  })
+
+  it("shows a visible Add another label", () => {
+    renderDialog()
+
+    expect(screen.getByText("Add another")).toBeInTheDocument()
   })
 
   it("disables submit button when no title is parsed", () => {
@@ -2079,8 +2118,8 @@ describe("QuickAddDialog", () => {
       const dateButton = screen.getByRole("button", { name: "Date" })
       expect(priorityButton).toBeInTheDocument()
       expect(dateButton).toBeInTheDocument()
-      expect(screen.queryByText("Priority")).toBeNull()
-      expect(screen.queryByText("Date")).toBeNull()
+      expect(screen.getByText("Priority")).toBeInTheDocument()
+      expect(screen.getByText("Date")).toBeInTheDocument()
 
       // Should have responsive text sizing
       const buttons = dialogContent.querySelectorAll(

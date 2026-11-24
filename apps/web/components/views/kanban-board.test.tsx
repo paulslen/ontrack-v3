@@ -226,6 +226,15 @@ vi.mock("@/components/ui/badge", () => ({
 
 // Mock Lucide icons
 vi.mock("lucide-react", () => ({
+  // Icons used by the assistant panel
+  ArrowUp: () => <div data-testid="arrow-up-icon" />,
+  Trash2: () => <div data-testid="trash-icon" />,
+  X: () => <div data-testid="x-icon" />,
+  Check: () => <div data-testid="check-icon" />,
+  Sparkles: () => <div data-testid="sparkles-icon" />,
+  Sun: () => <div data-testid="sun-icon" />,
+  AlarmClock: () => <div data-testid="alarm-clock-icon" />,
+  ArrowRight: () => <div data-testid="arrow-right-icon" />,
   Plus: () => <div data-testid="plus-icon" />,
   MoreHorizontal: () => <div data-testid="more-horizontal-icon" />,
   Flag: ({ className }: { className?: string }) => (

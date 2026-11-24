@@ -1,5 +1,6 @@
 import { render, screen } from "@/test-utils/render-with-providers"
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import userEvent from "@testing-library/user-event"
 import { TaskActionsMenu } from "./task-actions-menu"
 import type { Task } from "@tasktrove/types/core"
 import { TEST_TASK_ID_1 } from "@tasktrove/types/test-constants"
@@ -197,6 +198,28 @@ describe("TaskActionsMenu", () => {
         />,
       )
       expect(screen.getByText("Unarchive")).toBeInTheDocument()
+    })
+  })
+
+  describe("Row actions moved into the menu", () => {
+    it("shows Estimation and Start focus timer for tasks when handlers are given", async () => {
+      const onEstimationClick = vi.fn()
+      const onStartFocusTimerClick = vi.fn()
+      const user = userEvent.setup()
+      renderTaskActionsMenu({ open: true, onEstimationClick, onStartFocusTimerClick })
+
+      await user.click(screen.getByText("Estimation"))
+      expect(onEstimationClick).toHaveBeenCalled()
+
+      await user.click(screen.getByText("Start focus timer"))
+      expect(onStartFocusTimerClick).toHaveBeenCalled()
+    })
+
+    it("omits Estimation and Start focus timer without handlers", () => {
+      renderTaskActionsMenu({ open: true })
+
+      expect(screen.queryByText("Estimation")).not.toBeInTheDocument()
+      expect(screen.queryByText("Start focus timer")).not.toBeInTheDocument()
     })
   })
 })

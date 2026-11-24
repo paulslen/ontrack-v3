@@ -222,11 +222,28 @@ describe("VirtualizedTaskList", () => {
     expect(screen.getByTestId(`task-item-${TEST_TASK_ID_1}`)).toBeInTheDocument()
   })
 
-  it("places task spacing outside the drop target to keep indicators aligned", () => {
+  it("renders flat default rows flush without spacers", () => {
     render(
       <VirtualizedTaskList
         tasks={mockTasks}
         variant="default"
+        sortedTaskIds={sortedTaskIds}
+        enableDropTargets={true}
+        onDropTaskToListItem={() => undefined}
+      />,
+    )
+
+    screen.getAllByTestId(/^task-item-/).forEach((taskItem) => {
+      const containerDiv = taskItem.closest("[data-index]")
+      expect(containerDiv?.querySelector('[aria-hidden="true"].h-1')).toBeNull()
+    })
+  })
+
+  it("places task spacing outside the drop target to keep indicators aligned", () => {
+    render(
+      <VirtualizedTaskList
+        tasks={mockTasks}
+        variant="compact"
         sortedTaskIds={sortedTaskIds}
         enableDropTargets={true}
         onDropTaskToListItem={() => undefined}

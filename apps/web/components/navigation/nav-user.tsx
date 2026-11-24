@@ -11,6 +11,10 @@ import {
   Download,
   CheckCircle2,
   AlertTriangle,
+  HelpCircle,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react"
 import { SiGithub, SiDiscord } from "@icons-pack/react-simple-icons"
 import { signOut } from "next-auth/react"
@@ -22,7 +26,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/custom/sidebar"
@@ -30,6 +39,9 @@ import { AboutModal } from "@/components/dialogs/about-modal"
 import { useTranslation } from "@tasktrove/i18n"
 import { userAtom } from "@tasktrove/atoms/data/base/atoms"
 import { openSettingsDialogAtom, openUserProfileDialogAtom } from "@tasktrove/atoms/ui/dialogs"
+import { currentRouteContextAtom } from "@tasktrove/atoms/ui/navigation"
+import { useTheme } from "next-themes"
+import { getHelpContent } from "@/lib/help-content"
 import { ComingSoonWrapper } from "@/components/ui/coming-soon-wrapper"
 import { LogoutConfirmDialog } from "@/components/dialogs/logout-confirm-dialog"
 import { showPWAInstallPrompt, isPWA, refreshBrowser } from "@tasktrove/dom-utils"
@@ -80,6 +92,10 @@ export function NavUser({ onSignOut, issue, extraMenuItems, cornerBadge }: NavUs
   const [isRunningAsPWA, setIsRunningAsPWA] = useState(false)
   const [issueDialogOpen, setIssueDialogOpen] = useState(false)
   const [issueDialogIssue, setIssueDialogIssue] = useState<NavUserIssue | null>(null)
+  const [helpDialogOpen, setHelpDialogOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
+  const routeContext = useAtomValue(currentRouteContextAtom)
+  const helpContent = getHelpContent(routeContext)
   const openSettingsDialog = useSetAtom(openSettingsDialogAtom)
   const openUserProfileDialog = useSetAtom(openUserProfileDialogAtom)
 
@@ -301,30 +317,43 @@ export function NavUser({ onSignOut, issue, extraMenuItems, cornerBadge }: NavUs
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {issueBanner}
-        {!isPro() && (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => window.open("https://tasktrove.io/#pricing", "_blank")}
-                className="px-1 cursor-pointer"
-              >
-                {/* material design icon "Stars": https://github.com/google/material-design-icons */}
-                <svg
-                  className="mr-1 h-6 w-6 text-yellow-500 font-bold fill-current shrink-0 min-h-[24px] min-w-[24px]"
-                  xmlns="http://www.w3.org/2000/svg"
-                  height="24px"
-                  viewBox="0 -960 960 960"
-                  width="24px"
-                  fill={THEME_COLORS.navIconFill}
-                >
-                  <path d="m320-240 160-122 160 122-60-198 160-114H544l-64-208-64 208H220l160 114-60 198ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
-                </svg>
-                <span className="font-bold">{t("userMenu.upgradeToPro", "Upgrade to Pro")}</span>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-          </>
-        )}
+        <DropdownMenuGroup>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="cursor-pointer">
+              {theme === "dark" ? (
+                <Moon className="mr-2 h-4 w-4" />
+              ) : theme === "light" ? (
+                <Sun className="mr-2 h-4 w-4" />
+              ) : (
+                <Monitor className="mr-2 h-4 w-4" />
+              )}
+              {t("userMenu.theme", "Theme")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                <DropdownMenuRadioItem value="light" className="cursor-pointer">
+                  <Sun className="mr-2 h-4 w-4" />
+                  {t("userMenu.themeLight", "Light")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark" className="cursor-pointer">
+                  <Moon className="mr-2 h-4 w-4" />
+                  {t("userMenu.themeDark", "Dark")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system" className="cursor-pointer">
+                  <Monitor className="mr-2 h-4 w-4" />
+                  {t("userMenu.themeSystem", "System")}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          {helpContent && (
+            <DropdownMenuItem className="cursor-pointer" onClick={() => setHelpDialogOpen(true)}>
+              <HelpCircle className="mr-2 h-4 w-4" />
+              {t("userMenu.helpForView", "Help for this view")}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuGroup>
           {visibleMenuItems.map((item, index) => {
             const isInstallAppItem = item.icon === Download
@@ -356,6 +385,30 @@ export function NavUser({ onSignOut, issue, extraMenuItems, cornerBadge }: NavUs
             )
           })}
         </DropdownMenuGroup>
+        {!isPro() && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={() => window.open("https://tasktrove.io/#pricing", "_blank")}
+                className="px-1 cursor-pointer"
+              >
+                {/* material design icon "Stars": https://github.com/google/material-design-icons */}
+                <svg
+                  className="mr-1 h-6 w-6 text-yellow-500 font-bold fill-current shrink-0 min-h-[24px] min-w-[24px]"
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="24px"
+                  viewBox="0 -960 960 960"
+                  width="24px"
+                  fill={THEME_COLORS.navIconFill}
+                >
+                  <path d="m320-240 160-122 160 122-60-198 160-114H544l-64-208-64 208H220l160 114-60 198ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+                </svg>
+                <span className="font-bold">{t("userMenu.upgradeToPro", "Upgrade to Pro")}</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -371,6 +424,18 @@ export function NavUser({ onSignOut, issue, extraMenuItems, cornerBadge }: NavUs
       )}
 
       <AboutModal open={aboutModalOpen} onOpenChange={setAboutModalOpen} />
+      {helpContent && (
+        <Dialog open={helpDialogOpen} onOpenChange={setHelpDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{helpContent.title}</DialogTitle>
+            </DialogHeader>
+            <div className="text-sm leading-relaxed text-muted-foreground">
+              {helpContent.content}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       {issueDialogIssue?.details && (
         <Dialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen}>
           <DialogContent className="max-w-xl">

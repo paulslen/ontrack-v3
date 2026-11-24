@@ -33,8 +33,11 @@ describe("MainLayoutWrapper - Keyboard Shortcut Configuration", () => {
     // Verify that n key is included
     expect(componentContent).toContain('"n",')
 
-    // Verify the handler includes n key
-    expect(componentContent).toContain('if ((modifier && key === "n") || key === "n") {')
+    // Verify the handler includes n key: plain n focuses the inline composer, otherwise quick add opens
+    expect(componentContent).toContain(
+      'if (key === "n" && !modifier && focusInlineTaskComposer()) {',
+    )
+    expect(componentContent).toContain('if (key === "n") {')
   })
 
   it("should have history shortcuts disabled", () => {
@@ -90,7 +93,7 @@ describe("MainLayoutWrapper - Keyboard Shortcut Configuration", () => {
     expect(componentContent).toContain('"Ctrl+Shift+T",')
 
     // Verify their handlers are still active
-    expect(componentContent).toContain('if ((modifier && key === "n") || key === "n") {')
+    expect(componentContent).toContain('if (key === "n") {')
     expect(componentContent).toContain('if (key === "?" && !modifier) {')
     expect(componentContent).toContain('if (modifier && shiftKey && key === "T") {')
   })

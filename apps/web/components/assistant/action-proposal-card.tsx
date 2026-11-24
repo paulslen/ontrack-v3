@@ -146,26 +146,37 @@ export function ActionProposalCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background px-3 py-2.5 space-y-2",
-        item.status === "pending" ? "border-primary/40" : "border-border/60 opacity-80",
+        "rounded-2xl border bg-card p-4 space-y-3 transition-all animate-in fade-in slide-in-from-bottom-1 duration-200",
+        item.status === "pending" ? "border-foreground/15 shadow-sm" : "border-border/60",
       )}
       data-testid="assistant-action-card"
     >
-      <div className="flex items-start gap-2">
-        <Icon className="size-3.5 mt-0.5 flex-shrink-0 text-muted-foreground" />
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            "flex size-8 flex-shrink-0 items-center justify-center rounded-full",
+            item.status === "approved"
+              ? "bg-green-600/10 text-green-600 dark:text-green-500"
+              : "bg-muted text-muted-foreground",
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {isCreate ? "Create task" : "Update task"}
           </p>
-          <p className="text-sm font-medium text-foreground break-words">{title}</p>
+          <p className="text-[0.9375rem] font-semibold leading-snug text-foreground break-words">
+            {title}
+          </p>
         </div>
         {item.status !== "pending" && (
           <span
             className={cn(
-              "flex items-center gap-1 text-xs flex-shrink-0",
-              item.status === "approved" && "text-green-600 dark:text-green-500",
-              item.status === "rejected" && "text-muted-foreground",
-              item.status === "failed" && "text-destructive",
+              "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium flex-shrink-0",
+              item.status === "approved" && "bg-green-600/10 text-green-700 dark:text-green-500",
+              item.status === "rejected" && "bg-muted text-muted-foreground",
+              item.status === "failed" && "bg-destructive/10 text-destructive",
             )}
           >
             {item.status === "approved" && <Check className="size-3" />}
@@ -176,7 +187,7 @@ export function ActionProposalCard({
       </div>
 
       {details.length > 0 && (
-        <ul className="space-y-0.5 pl-5.5 text-xs text-muted-foreground">
+        <ul className="space-y-1 pl-11 text-sm text-muted-foreground">
           {details.map((detail) => (
             <li key={detail} className="break-words line-clamp-3">
               {detail}
@@ -186,25 +197,25 @@ export function ActionProposalCard({
       )}
 
       {item.status === "pending" && (
-        <div className="flex gap-1.5 pl-5.5">
+        <div className="flex gap-2 pl-11">
           <Button
-            size="sm"
-            variant={decision === "approved" ? "default" : "outline"}
-            className="h-7 gap-1 text-xs"
+            className={cn(
+              "h-10 gap-1.5 rounded-full px-5",
+              decision === "rejected" && "opacity-60",
+            )}
             disabled={disabled}
             onClick={() => onDecide("approved")}
           >
-            <Check className="size-3" />
+            <Check className="size-4" />
             Approve
           </Button>
           <Button
-            size="sm"
             variant={decision === "rejected" ? "secondary" : "ghost"}
-            className="h-7 gap-1 text-xs"
+            className="h-10 gap-1.5 rounded-full px-5"
             disabled={disabled}
             onClick={() => onDecide("rejected")}
           >
-            <X className="size-3" />
+            <X className="size-4" />
             Reject
           </Button>
         </div>

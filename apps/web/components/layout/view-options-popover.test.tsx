@@ -335,7 +335,8 @@ describe("ViewOptionsPopover", () => {
     // For now, we test the component structure
     renderWithJotai(<ViewOptionsPopover />)
 
-    const trigger = screen.getByTestId("popover-trigger")
+    // Filter and sort popovers now live inside view options, so several triggers render
+    const [trigger] = screen.getAllByTestId("popover-trigger")
     expect(trigger).toBeInTheDocument()
 
     // The dot would appear when view state is non-default

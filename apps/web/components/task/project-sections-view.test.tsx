@@ -975,11 +975,10 @@ describe("ProjectSectionsView", () => {
     // })
   })
 
-  it("opens quick add dialog when Add Task button is clicked", async () => {
+  it("opens quick add dialog from the inline composer's more-options button", async () => {
     render(<ProjectSectionsView droppableId="test-droppable" />)
 
-    const addTaskButton = screen.getByText("Add Task")
-    await userEvent.click(addTaskButton)
+    await userEvent.click(screen.getByRole("button", { name: "More options" }))
 
     expect(mockOpenQuickAdd).toHaveBeenCalled()
   })
@@ -1574,17 +1573,16 @@ describe("ProjectSectionsView", () => {
       expect(screen.queryByTestId("add-section-divider-3")).not.toBeInTheDocument()
     })
 
-    it("shows Add Task button in flat mode", () => {
+    it("shows the inline task composer in flat mode", () => {
       render(<ProjectSectionsView droppableId="test-droppable" supportsSections={false} />)
 
-      expect(screen.getByText("Add Task")).toBeInTheDocument()
+      expect(screen.getByPlaceholderText("What needs doing?")).toBeInTheDocument()
     })
 
-    it("opens quick add dialog when Add Task button is clicked in flat mode", async () => {
+    it("opens quick add dialog from the composer's more-options button in flat mode", async () => {
       render(<ProjectSectionsView droppableId="test-droppable" supportsSections={false} />)
 
-      const addTaskButton = screen.getByText("Add Task")
-      await userEvent.click(addTaskButton)
+      await userEvent.click(screen.getByRole("button", { name: "More options" }))
 
       expect(mockOpenQuickAdd).toHaveBeenCalled()
     })
@@ -1817,7 +1815,7 @@ describe("ProjectSectionsView", () => {
 
       // Find both toolbars
       const selectionToolbar = screen.getByTestId("selection-toolbar")
-      const filterControls = screen.getByTestId("task-filter-controls")
+      const filterControls = screen.getByPlaceholderText("What needs doing?")
 
       // Both should be in the same max-w-screen-2xl container
       const selectionToolbarContainer = selectionToolbar.closest(".max-w-screen-2xl")

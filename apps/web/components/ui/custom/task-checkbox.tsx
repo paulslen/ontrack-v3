@@ -10,6 +10,8 @@ import { getPriorityColor } from "@/lib/color-utils"
 type TaskCheckboxProps = React.ComponentProps<typeof CheckboxPrimitive.Root> & {
   indicatorClassName?: string
   priority?: number
+  /** Preview a faint check mark on hover while unchecked */
+  showHoverCheck?: boolean
 }
 
 const PRIORITY_CHECKBOX_COLORS: Record<string, { root: string; indicator: string }> = {
@@ -62,7 +64,13 @@ const DEFAULT_COLOR_CLASSES = cn(
   "focus-visible:ring-ring/50",
 )
 
-function TaskCheckbox({ className, indicatorClassName, priority, ...props }: TaskCheckboxProps) {
+function TaskCheckbox({
+  className,
+  indicatorClassName,
+  priority,
+  showHoverCheck = false,
+  ...props
+}: TaskCheckboxProps) {
   const priorityColorKey = typeof priority === "number" ? getPriorityColor(priority) : undefined
   const priorityClasses = priorityColorKey ? PRIORITY_CHECKBOX_COLORS[priorityColorKey] : undefined
 
@@ -78,6 +86,7 @@ function TaskCheckbox({ className, indicatorClassName, priority, ...props }: Tas
         priorityClasses?.root ?? DEFAULT_COLOR_CLASSES,
         // Disabled state
         "disabled:cursor-not-allowed disabled:opacity-50",
+        showHoverCheck && "group/check relative",
         className,
       )}
       {...props}
@@ -92,6 +101,20 @@ function TaskCheckbox({ className, indicatorClassName, priority, ...props }: Tas
       >
         <CheckIcon className="size-3.5 stroke-[2.5]" />
       </CheckboxPrimitive.Indicator>
+      {showHoverCheck && !props.checked && (
+        <span
+          aria-hidden="true"
+          data-slot="task-checkbox-hover-check"
+          className={cn(
+            "pointer-events-none absolute inset-0 flex items-center justify-center",
+            "opacity-0 transition-opacity group-hover/check:opacity-50",
+            priorityClasses?.indicator ?? "text-muted-foreground",
+            indicatorClassName,
+          )}
+        >
+          <CheckIcon className="size-3.5 stroke-[2.5]" />
+        </span>
+      )}
     </CheckboxPrimitive.Root>
   )
 }

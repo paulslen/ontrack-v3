@@ -19,6 +19,7 @@ import {
   CheckSquare,
   ArrowUpRight,
   Archive,
+  Play,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Task } from "@tasktrove/types/core"
@@ -32,6 +33,7 @@ interface TaskActionsMenuProps {
   onDeleteClick: () => void
   onEditClick?: () => void
   onEstimationClick?: () => void
+  onStartFocusTimerClick?: () => void
   onSelectClick?: () => void
   onConvertToTaskClick?: () => void
   isSubTask?: boolean
@@ -47,6 +49,7 @@ export function TaskActionsMenu({
   onDeleteClick,
   onEditClick,
   onEstimationClick,
+  onStartFocusTimerClick,
   onSelectClick,
   onConvertToTaskClick,
   isSubTask = false,
@@ -113,6 +116,13 @@ export function TaskActionsMenu({
     // setIsOpen(false) // NOTE: Must not close menu when opening estimation modal, otherwise estimation modal is closed too
   }
 
+  const handleStartFocusTimerClick = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    e?.preventDefault()
+    onStartFocusTimerClick?.()
+    setIsOpen(false)
+  }
+
   const handleCopyClick = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     e?.preventDefault()
@@ -155,7 +165,7 @@ export function TaskActionsMenu({
           <Button
             variant="ghost"
             className={cn(
-              "h-5 w-5 p-0 m-0 flex-shrink-0 flex items-center justify-center",
+              "size-6 p-0 m-0 flex-shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground",
               isVisible || hideTrigger ? "flex" : "hidden",
               hideTrigger &&
                 "absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 p-0 opacity-0 pointer-events-none",
@@ -164,10 +174,10 @@ export function TaskActionsMenu({
             aria-hidden={hideTrigger || undefined}
             tabIndex={hideTrigger ? -1 : 0}
           >
-            <MoreHorizontal className="h-3.5 w-3.5" />
+            <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className={cn("w-32", isSubTask && "w-40")}>
+        <DropdownMenuContent align="end" className={cn("w-44", isSubTask && "w-40")}>
           {!isSubTask && onSelectClick && (
             <DropdownMenuItem onClick={handleSelectClick} className="cursor-pointer">
               <CheckSquare className="h-3.5 w-3.5 mr-2" />
@@ -198,10 +208,16 @@ export function TaskActionsMenu({
               {task.archived ? "Unarchive" : "Archive"}
             </DropdownMenuItem>
           )}
-          {isSubTask && onEstimationClick && (
+          {onEstimationClick && (
             <DropdownMenuItem onClick={handleEstimationClick} className="cursor-pointer">
               <ClockFading className="h-3.5 w-3.5 mr-2" />
               Estimation
+            </DropdownMenuItem>
+          )}
+          {onStartFocusTimerClick && (
+            <DropdownMenuItem onClick={handleStartFocusTimerClick} className="cursor-pointer">
+              <Play className="h-3.5 w-3.5 mr-2" />
+              Start focus timer
             </DropdownMenuItem>
           )}
           {/* <DropdownMenuItem onClick={handleTimerClick}>

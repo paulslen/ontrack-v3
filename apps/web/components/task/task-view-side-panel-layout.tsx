@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
-import { useAtomValue, useSetAtom } from "jotai"
+import { useSetAtom } from "jotai"
 import { TaskSidePanel } from "@/components/task/task-side-panel"
 import { MasterAssistantPanel } from "@/components/assistant/master-assistant-panel"
 import {
@@ -13,13 +13,12 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAssistantPanel } from "@/hooks/use-assistant-panel"
 import { cn } from "@/lib/utils"
-import { assistantPanelWidthAtom } from "@tasktrove/atoms/ui/assistant"
+import { setViewOptionsAtom } from "@tasktrove/atoms/ui/views"
 import {
-  setViewOptionsAtom,
-  sidePanelWidthAtom,
-  updateGlobalViewOptionsAtom,
-} from "@tasktrove/atoms/ui/views"
-import { SIDE_PANEL_WIDTH_MAX, SIDE_PANEL_WIDTH_MIN } from "@tasktrove/constants"
+  SIDE_PANEL_OPEN_WIDTH,
+  SIDE_PANEL_WIDTH_MAX,
+  SIDE_PANEL_WIDTH_MIN,
+} from "@tasktrove/constants"
 
 type SidePanelLayoutProps = {
   children: ReactNode
@@ -43,17 +42,13 @@ export function TaskViewSidePanelLayout({
   applyContentPadding = false,
 }: SidePanelLayoutProps) {
   const { isTaskPanelOpen, isAssistantOpen } = useAssistantPanel()
-  const taskPanelWidth = useAtomValue(sidePanelWidthAtom)
-  const assistantPanelWidth = useAtomValue(assistantPanelWidthAtom)
-  const setAssistantPanelWidth = useSetAtom(assistantPanelWidthAtom)
-  const updateGlobalViewOptions = useSetAtom(updateGlobalViewOptionsAtom)
   const setViewOptions = useSetAtom(setViewOptionsAtom)
   const isMobile = useIsMobile()
   const panelGroupRef = useRef<ResizablePanelGroupHandle | null>(null)
 
   const isPanelOpen = isTaskPanelOpen || isAssistantOpen
-  // Each panel keeps its own width so resizing one doesn't resize the other
-  const sidePanelWidth = isTaskPanelOpen ? taskPanelWidth : assistantPanelWidth
+  // The panel always opens at a fixed split (list and panel equal); drag-resizing lasts until it closes
+  const sidePanelWidth = SIDE_PANEL_OPEN_WIDTH
 
   // Update panel layout when panel state or width changes (desktop only)
   useEffect(() => {
@@ -96,20 +91,6 @@ export function TaskViewSidePanelLayout({
     setViewOptions({ showSidePanel: false })
   }, [setViewOptions])
 
-  const handlePanelResize = useCallback(
-    (sizes: number[]) => {
-      if (!isPanelOpen) return
-      const panelSize = sizes[1]
-      if (panelSize === undefined) return
-      if (isTaskPanelOpen) {
-        updateGlobalViewOptions({ sidePanelWidth: panelSize })
-      } else {
-        setAssistantPanelWidth(panelSize)
-      }
-    },
-    [isPanelOpen, isTaskPanelOpen, updateGlobalViewOptions, setAssistantPanelWidth],
-  )
-
   const renderSidePanel = (variant?: "resizable") => (
     <TaskSidePanel isOpen={isTaskPanelOpen} onClose={handleClosePanel} variant={variant} />
   )
@@ -131,12 +112,7 @@ export function TaskViewSidePanelLayout({
 
   const desktopLayout = (
     <div className={cn("flex flex-col h-full overflow-hidden", rootClassName)}>
-      <ResizablePanelGroup
-        ref={panelGroupRef}
-        direction="horizontal"
-        className="flex-1 min-h-0"
-        onLayout={handlePanelResize}
-      >
+      <ResizablePanelGroup ref={panelGroupRef} direction="horizontal" className="flex-1 min-h-0">
         <ResizablePanel
           defaultSize={isPanelOpen ? 100 - sidePanelWidth : 100}
           minSize={SIDE_PANEL_WIDTH_MIN}

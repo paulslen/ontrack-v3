@@ -25,13 +25,11 @@ import {
   Square,
   GripVertical,
   X,
-  ArrowUp,
-  ArrowRight,
 } from "lucide-react"
-import { addDays } from "date-fns"
+import { addDays, isToday, isTomorrow } from "date-fns"
 import { cn, getContrastColor } from "@/lib/utils"
 import { formatTime, getEffectiveEstimation } from "@/lib/utils/time-estimation"
-import { getPriorityColor, getPriorityTextColor } from "@/lib/color-utils"
+import { getPriorityColor } from "@/lib/color-utils"
 import { isPro } from "@/lib/utils/env"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { TaskSchedulePopover } from "./task-schedule-popover"
@@ -78,9 +76,7 @@ import { useTranslation } from "@tasktrove/i18n"
 import { useTaskMetadataFlash } from "@/hooks/use-flash-on-change"
 import { useTaskMultiSelectClick } from "@/hooks/use-task-multi-select"
 import { DeleteConfirmDialog } from "@/components/dialogs/delete-confirm-dialog"
-// Responsive width for metadata columns to ensure consistent alignment
-const METADATA_COLUMN_WIDTH = "w-auto sm:w-20 md:w-24"
-
+import { RescheduleToggle } from "./reschedule-toggle"
 // Helper component for time estimation trigger button
 function TimeEstimationTrigger({ task, className }: { task: Task; className?: string }) {
   const { estimation, isFromSubtasks } = getEffectiveEstimation(task)
@@ -232,7 +228,6 @@ export function TaskItem({
   // Compact variant specific state
   const [labelsExpanded, setLabelsExpanded] = useState(false)
   const [isDescriptionEditing, setIsDescriptionEditing] = useState(false)
-  const [isDefaultDescriptionEditing, setIsDefaultDescriptionEditing] = useState(false)
   const [isTitleEditing, setIsTitleEditing] = useState(false)
   // Subtask estimation picker state
   const [showEstimationPicker, setShowEstimationPicker] = useState(false)
@@ -254,6 +249,7 @@ export function TaskItem({
 
   // Atom actions
   const toggleTask = useSetAtom(toggleTaskAtom)
+  const startFocusTimer = useSetAtom(startFocusTimerAtom)
   const deleteTask = useSetAtom(deleteTaskAtom)
   const updateTask = useSetAtom(updateTaskAtom)
   const addComment = useSetAtom(addCommentAtom)
@@ -337,6 +333,8 @@ export function TaskItem({
     actions?.menu ??
     (variant === "minimal" ? "context" : variant === "calendar" ? "none" : "visible")
   const shouldShowActionsMenu = menuMode !== "none"
+  const hasEstimation = getEffectiveEstimation(task).estimation > 0
+  const isThisTaskTimerActive = activeFocusTimer?.taskId === task.id
   const shouldShowDeleteButton = actions?.deleteButton ?? variant === "minimal"
 
   const handleArchiveToggle = (archived: boolean) => {
@@ -528,7 +526,7 @@ export function TaskItem({
 
   const handleTaskContextMenu = (event: React.MouseEvent) => {
     if (!shouldShowActionsMenu) return
-    if (isTitleEditing || isDescriptionEditing || isDefaultDescriptionEditing) return
+    if (isTitleEditing || isDescriptionEditing) return
     const target = event.target
     if (!(target instanceof HTMLElement)) return
     if (target.closest("input, textarea, select, [contenteditable='true']")) return
@@ -1455,469 +1453,166 @@ export function TaskItem({
     )
   }
 
-  // Default variant render
+  // Default variant render - flat focus row: check · title (+ quiet meta) · Today|Tomorrow · …
+  const dueToday = task.dueDate ? isToday(task.dueDate) : false
+  const dueTomorrow = task.dueDate ? isTomorrow(task.dueDate) : false
+  // Today/Tomorrow already show through the reschedule toggle; only other dates need a chip
+  const showScheduleMeta =
+    Boolean(task.recurring) || (Boolean(task.dueDate) && !dueToday && !dueTomorrow)
+  const taskLabels = getLabelsFromIds(task.labels)
+  const hasMeta =
+    showScheduleMeta || taskLabels.length > 0 || hasEstimation || isThisTaskTimerActive
+
   return (
     <MaterialCard
-      variant="default"
+      variant="flat"
       selected={isSelected || isInSelection}
       completed={isCompleted}
       archived={isArchived}
-      leftBorderColor={getPriorityColor(task.priority, "default")}
       onClick={handleTaskClick}
       onContextMenu={handleTaskContextMenu}
       onMouseEnter={handleTaskMouseEnter}
       onMouseLeave={handleTaskMouseLeave}
-      className={cn(shouldShowHoverHighlight && "bg-accent/50", className)}
+      className={cn("group/task", shouldShowHoverHighlight && "bg-accent/50", className)}
       data-task-focused={isSelected}
       data-task-id={task.id}
     >
-      {/* Main Layout - Flex with proper alignment */}
-      <div className="flex gap-2 sm:gap-3">
-        {/* Left Side - Checkbox and quick due-date actions, stacked */}
-        <div className="flex flex-col items-center gap-1 flex-shrink-0">
-          {/* Task Completion Checkbox */}
-          <TaskCheckbox
-            checked={task.completed}
-            onCheckedChange={() => toggleTask(task.id)}
-            className="mt-0.5"
-            data-action="toggle"
+      <div className="flex items-center gap-3 sm:gap-4">
+        <TaskCheckbox
+          checked={task.completed}
+          onCheckedChange={() => toggleTask(task.id)}
+          priority={task.priority}
+          showHoverCheck
+          className="size-7 flex items-center justify-center active:scale-90"
+          indicatorClassName="[&_svg]:size-4"
+          data-action="toggle"
+        />
+
+        <div className="flex-1 min-w-0">
+          <LinkifiedEditableDiv
+            as="h3"
+            value={task.title}
+            onChange={(newTitle) => {
+              if (newTitle.trim() && newTitle !== task.title) {
+                updateTask({ updateRequest: { id: task.id, title: newTitle.trim() } })
+              }
+            }}
+            onEditingChange={setIsTitleEditing}
+            className={cn(
+              "font-medium text-[1.0625rem] leading-snug w-fit max-w-full",
+              !isTitleEditing && "line-clamp-2",
+              task.completed
+                ? "line-through text-muted-foreground"
+                : isArchived
+                  ? "text-muted-foreground"
+                  : "text-foreground",
+            )}
+            data-action="edit"
+            allowEmpty={false}
           />
 
-          {/* Quick due-date actions - do not affect completion */}
-          <button
-            type="button"
-            className="flex items-center justify-center size-7 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-            data-action="set-due-today"
-            title={t("actions.setDueToday", "Set due date to today")}
-            aria-label={t("actions.setDueToday", "Set due date to today")}
-            onClick={(e) => {
-              e.stopPropagation()
-              updateTask({ updateRequest: { id: task.id, dueDate: new Date() } })
-            }}
-          >
-            <ArrowUp className="h-[18px] w-[18px]" />
-          </button>
-          <button
-            type="button"
-            className="flex items-center justify-center size-7 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-            data-action="set-due-tomorrow"
-            title={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
-            aria-label={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
-            onClick={(e) => {
-              e.stopPropagation()
-              updateTask({ updateRequest: { id: task.id, dueDate: addDays(new Date(), 1) } })
-            }}
-          >
-            <ArrowRight className="h-[18px] w-[18px]" />
-          </button>
-        </div>
-
-        {/* Right Side - All Content Vertically Aligned */}
-        <div className="flex-1 min-w-0">
-          {/* Title Row */}
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex items-start gap-2 flex-1 min-w-0">
-              {/* Title - Responsive max-width */}
-              <LinkifiedEditableDiv
-                as="h3"
-                value={task.title}
-                onChange={(newTitle) => {
-                  if (newTitle.trim() && newTitle !== task.title) {
-                    updateTask({ updateRequest: { id: task.id, title: newTitle.trim() } })
-                  }
-                }}
-                onEditingChange={setIsTitleEditing}
-                className={cn(
-                  "font-medium text-sm sm:text-[15px] leading-5 w-fit",
-                  "max-w-full",
-                  !isTitleEditing && "line-clamp-2",
-                  task.completed
-                    ? "line-through text-muted-foreground"
-                    : isArchived
-                      ? "text-muted-foreground"
-                      : "text-foreground",
-                )}
-                data-action="edit"
-                allowEmpty={false}
-              />
-
-              {/* Favorite feature removed */}
-            </div>
-
-            {/* Timer and Actions - Now on the right */}
-            <div className="flex items-center gap-2">
-              <TimeEstimationPopover taskId={task.id}>
-                <TimeEstimationTrigger task={task} />
-              </TimeEstimationPopover>
-              {shouldShowFocusTimer(task.id, activeFocusTimer) && (
-                <FocusTimerPopover taskId={task.id}>
-                  <FocusTimerTrigger taskId={task.id} />
-                </FocusTimerPopover>
+          {/* Quiet meta line - only what carries information */}
+          {hasMeta && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              {showScheduleMeta && (
+                <TaskSchedulePopover taskId={task.id}>
+                  <TaskScheduleTrigger
+                    dueDate={task.dueDate}
+                    dueTime={task.dueTime}
+                    recurring={task.recurring}
+                    recurringMode={task.recurringMode}
+                    completed={isCompleted}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-md cursor-pointer hover:text-foreground transition-colors",
+                      getFlashClass("schedule"),
+                    )}
+                  />
+                </TaskSchedulePopover>
               )}
-              {shouldShowActionsMenu && (
-                <TaskActionsMenu
-                  task={task}
-                  isVisible={true}
-                  onDeleteClick={() => deleteTask(task.id)}
-                  onSelectClick={() => toggleTaskSelection(taskId)}
-                  onArchiveToggle={handleArchiveToggle}
-                  isSubTask={false}
-                  open={actionsMenuOpen}
-                  onOpenChange={handleActionsMenuChange}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Description - Hide on mobile in default variant to save space */}
-          <div className={cn("mb-2 hidden sm:block")}>
-            <div className="flex gap-2 sm:gap-3">
-              <MarkdownEditableDiv
-                as="p"
-                value={task.description || ""}
-                onChange={(newDescription: string) => {
-                  updateTask({ updateRequest: { id: task.id, description: newDescription } })
-                }}
-                placeholder={t("placeholders.addDescription", "Add description...")}
-                className={cn(
-                  "text-xs sm:text-sm hover:bg-accent",
-                  "w-full sm:w-[28rem] md:w-[32rem] lg:w-[36rem] xl:w-[40rem]",
-                  "max-w-full break-all min-w-0",
-                  task.description
-                    ? "text-muted-foreground"
-                    : !isDefaultDescriptionEditing
-                      ? "text-muted-foreground/60 italic"
-                      : "text-muted-foreground",
-                  // Only show when there's content or when hovering
-                  !task.description && !isHovered && "invisible",
-                )}
-                previewClassName="max-h-20 overflow-y-auto"
-                editingClassName="max-h-none overflow-visible"
-                data-action="edit"
-                multiline={true}
-                allowEmpty={true}
-                onEditingChange={setIsDefaultDescriptionEditing}
-                markdownEnabled={settings.general.markdownEnabled}
-              />
-              {/* Invisible placeholder to balance the checkbox on the left */}
-              <div className="flex-shrink-0 w-5" aria-hidden="true" />
-            </div>
-          </div>
-
-          {/* Task Metadata - Clean Single Line with Icons */}
-          {(() => {
-            const leftMetadataItems = []
-            const rightMetadataItems = []
-
-            // Left side - Fixed width items
-            // Due Date/Recurring - Now clickable with popover
-            leftMetadataItems.push(
-              <TaskSchedulePopover key="due-date" taskId={task.id}>
-                <TaskScheduleTrigger
-                  dueDate={task.dueDate}
-                  dueTime={task.dueTime}
-                  recurring={task.recurring}
-                  recurringMode={task.recurringMode}
-                  completed={isCompleted}
-                  className={cn("group/metadata", METADATA_COLUMN_WIDTH, getFlashClass("schedule"))}
-                  fallbackLabel={
-                    <TruncatedMetadataText showOnHover className="text-xs">
-                      {t("actions.addDate", "Add date")}
-                    </TruncatedMetadataText>
-                  }
-                />
-              </TaskSchedulePopover>,
-            )
-
-            // Priority Flag - Now clickable with popover
-            if (task.priority < 4) {
-              leftMetadataItems.push(
-                <PriorityPopover key="priority" task={task}>
-                  <span
-                    className={cn(
-                      "flex items-center gap-1 cursor-pointer hover:bg-accent transition-colors hover:opacity-100",
-                      METADATA_COLUMN_WIDTH,
-                      getPriorityTextColor(task.priority),
-                      getFlashClass("priority"),
-                    )}
-                  >
-                    <Flag className="h-3 w-3" />P{task.priority}
-                  </span>
-                </PriorityPopover>,
-              )
-            } else {
-              // Show add priority button when priority is 4 (no priority)
-              leftMetadataItems.push(
-                <PriorityPopover key="priority-hover" task={task}>
-                  <span
-                    className={cn(
-                      "group/metadata flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors opacity-70 hover:opacity-100",
-                      METADATA_COLUMN_WIDTH,
-                      getFlashClass("priority"),
-                    )}
-                  >
-                    <Flag className="h-3 w-3" />
-                    <TruncatedMetadataText showOnHover className="text-xs">
-                      {t("actions.addPriority", "Add priority")}
-                    </TruncatedMetadataText>
-                  </span>
-                </PriorityPopover>,
-              )
-            }
-
-            // Subtasks - Show if present or add subtask
-            const completed = task.subtasks.filter((s: Subtask) => s.completed).length
-            leftMetadataItems.push(
-              <SubtaskPopover key="subtasks" task={task}>
-                {task.subtasks.length > 0 ? (
-                  <span
-                    className={cn(
-                      "flex items-center gap-1 cursor-pointer hover:bg-accent transition-colors hover:opacity-100 text-foreground",
-                      METADATA_COLUMN_WIDTH,
-                      getFlashClass("subtasks"),
-                    )}
-                  >
-                    <CheckSquare className="h-3 w-3" />
-                    {completed}/{task.subtasks.length}
-                  </span>
-                ) : (
-                  <span
-                    className={cn(
-                      "group/metadata flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors whitespace-nowrap opacity-70 hover:opacity-100",
-                      METADATA_COLUMN_WIDTH,
-                      getFlashClass("subtasks"),
-                    )}
-                  >
-                    <CheckSquare className="h-3 w-3" />
-                    <TruncatedMetadataText showOnHover className="text-xs">
-                      {t("actions.addSubtask", "Add subtask")}
-                    </TruncatedMetadataText>
-                  </span>
-                )}
-              </SubtaskPopover>,
-            )
-
-            // Comments - Use unified popover for both viewing and adding
-            if (task.comments.length > 0) {
-              leftMetadataItems.push(
-                <CommentManagementPopover
-                  key="comments"
-                  task={task}
-                  onAddComment={(content) => addComment({ taskId: task.id, content })}
-                  onOpenChange={(open) => {
-                    if (!open) return
-                    // TODO: Handle onViewAll functionality if needed
-                  }}
-                >
-                  <span
-                    className={cn(
-                      "flex items-center gap-1 cursor-pointer hover:bg-accent transition-colors hover:opacity-100 text-foreground",
-                      METADATA_COLUMN_WIDTH,
-                      getFlashClass("comments"),
-                    )}
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    {task.comments.length}
-                  </span>
-                </CommentManagementPopover>,
-              )
-            } else {
-              // Show add comment button when no comments exist
-              leftMetadataItems.push(
-                <CommentManagementPopover
-                  key="comments"
-                  task={task}
-                  onAddComment={(content) => addComment({ taskId: task.id, content })}
-                >
-                  <span
-                    className={cn(
-                      "group/metadata flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors whitespace-nowrap opacity-70 hover:opacity-100",
-                      METADATA_COLUMN_WIDTH,
-                      getFlashClass("comments"),
-                    )}
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    <TruncatedMetadataText showOnHover className="text-xs">
-                      {t("actions.addComment", "Add comment")}
-                    </TruncatedMetadataText>
-                  </span>
-                </CommentManagementPopover>,
-              )
-            }
-
-            // Right side - Flexible width items
-            // Labels - Now clickable with popover for editing
-            if (task.labels.length > 0) {
-              const taskLabels = getLabelsFromIds(task.labels)
-              rightMetadataItems.push(
+              {taskLabels.length > 0 && (
                 <LabelManagementPopover
-                  key="labels"
                   task={task}
                   onAddLabel={handleAddLabel}
                   onRemoveLabel={handleRemoveLabel}
                 >
                   <span
                     className={cn(
-                      "flex items-center gap-1 cursor-pointer hover:bg-accent transition-colors",
+                      "inline-flex flex-wrap items-center gap-x-3 gap-y-1 cursor-pointer",
                       getFlashClass("labels"),
                     )}
                   >
                     {taskLabels.map((label) => (
                       <span
                         key={label.id}
-                        className="px-1.5 py-0.5 rounded text-xs flex items-center gap-1 hover:opacity-100 truncate max-w-20 sm:max-w-none break-all"
-                        style={{
-                          backgroundColor: label.color,
-                          color: getContrastColor(label.color),
-                        }}
+                        className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
                       >
-                        <Tag className="h-3 w-3 flex-shrink-0" />
+                        <span
+                          aria-hidden="true"
+                          className="size-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: label.color }}
+                        />
                         <TruncatedMetadataText>{label.name}</TruncatedMetadataText>
                       </span>
                     ))}
                   </span>
-                </LabelManagementPopover>,
-              )
-            } else {
-              // Show add labels button when no labels
-              rightMetadataItems.push(
-                <LabelManagementPopover
-                  key="labels"
-                  task={task}
-                  onAddLabel={handleAddLabel}
-                  onRemoveLabel={handleRemoveLabel}
-                >
-                  <span
-                    className={cn(
-                      "group/metadata flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors opacity-70 hover:opacity-100",
-                      getFlashClass("labels"),
-                    )}
-                  >
-                    <Tag className="h-3 w-3" />
-                    <TruncatedMetadataText showOnHover className="text-xs">
-                      {t("actions.addLabel", "Add label")}
-                    </TruncatedMetadataText>
-                  </span>
-                </LabelManagementPopover>,
-              )
-            }
+                </LabelManagementPopover>
+              )}
+              {hasEstimation && (
+                <TimeEstimationPopover taskId={task.id}>
+                  <TimeEstimationTrigger task={task} />
+                </TimeEstimationPopover>
+              )}
+              {isThisTaskTimerActive && (
+                <FocusTimerPopover taskId={task.id}>
+                  <FocusTimerTrigger taskId={task.id} />
+                </FocusTimerPopover>
+              )}
+            </div>
+          )}
+        </div>
 
-            // Project - Now clickable with project picker (always show to maintain consistent width)
-            if (showProjectBadge) {
-              if (taskProject) {
-                rightMetadataItems.push(
-                  <ProjectPopover key="project" task={task}>
-                    <span
-                      className={cn(
-                        "flex items-center gap-1 cursor-pointer hover:bg-accent transition-colors hover:opacity-100",
-                        METADATA_COLUMN_WIDTH,
-                        getFlashClass("project"),
-                      )}
-                    >
-                      <Folder
-                        className="h-3 w-3 flex-shrink-0"
-                        style={{ color: taskProject.color }}
-                      />
-                      <TruncatedMetadataText>{taskProject.name}</TruncatedMetadataText>
-                    </span>
-                  </ProjectPopover>,
-                )
-              } else if (allProjects.length > 0) {
-                // Always show project area to maintain consistent width
-                rightMetadataItems.push(
-                  <ProjectPopover key="project-hover" task={task}>
-                    <span
-                      className={cn(
-                        "group/metadata flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors opacity-70 hover:opacity-100",
-                        METADATA_COLUMN_WIDTH,
-                        getFlashClass("project"),
-                      )}
-                    >
-                      <Folder className="h-3 w-3" />
-                      <TruncatedMetadataText showOnHover className="text-xs">
-                        {t("actions.addProject", "Add project")}
-                      </TruncatedMetadataText>
-                    </span>
-                  </ProjectPopover>,
-                )
-              } else {
-                // Always maintain space even with no projects available
-                rightMetadataItems.push(
-                  <span
-                    key="project-placeholder"
-                    className={cn("invisible", METADATA_COLUMN_WIDTH, getFlashClass("project"))}
-                  >
-                    <Folder className="h-3 w-3" />
-                    <span className="text-xs">Placeholder</span>
-                  </span>,
-                )
+        {/* Primary actions - always visible */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {!isCompleted && (
+            <RescheduleToggle
+              dueToday={dueToday}
+              dueTomorrow={dueTomorrow}
+              onToday={() => updateTask({ updateRequest: { id: task.id, dueDate: new Date() } })}
+              onTomorrow={() =>
+                updateTask({ updateRequest: { id: task.id, dueDate: addDays(new Date(), 1) } })
               }
-            }
-
-            if (isPro()) {
-              const taskOwnerId =
-                "ownerId" in task && typeof task.ownerId === "string" ? task.ownerId : undefined
-              const taskAssignees =
-                "assignees" in task && Array.isArray(task.assignees) ? task.assignees : []
-              const hasAssignees = taskAssignees.length > 0
-              const hasOwner = Boolean(taskOwnerId)
-
-              rightMetadataItems.push(
-                <AssigneeManagementPopover key="assignees" task={task}>
-                  <span
-                    className={cn(
-                      "group/metadata flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors opacity-70 hover:opacity-100",
-                      METADATA_COLUMN_WIDTH,
-                      getFlashClass("assignees"),
-                    )}
-                  >
-                    <span className="flex items-center gap-1">
-                      <AssigneeBadges task={task} />
-                      {!hasAssignees && !hasOwner && (
-                        <TruncatedMetadataText showOnHover className="text-xs">
-                          {t("actions.addAssignee", "Add assignee")}
-                        </TruncatedMetadataText>
-                      )}
-                    </span>
-                  </span>
-                </AssigneeManagementPopover>,
-              )
-            }
-
-            // Attachments feature removed
-
-            return leftMetadataItems.length > 0 || rightMetadataItems.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                {/* Left side metadata */}
-                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                  {leftMetadataItems.map((item, index) => (
-                    <React.Fragment key={index}>
-                      {item}
-                      {index < leftMetadataItems.length - 1 && (
-                        <span className="mx-1 sm:mx-2 text-border hidden sm:inline">|</span>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-
-                {/* Right side metadata */}
-                {rightMetadataItems.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                    {rightMetadataItems.map((item, index) => (
-                      <React.Fragment key={index}>
-                        {item}
-                        {index < rightMetadataItems.length - 1 && (
-                          <span className="mx-1 sm:mx-2 text-border hidden sm:inline">|</span>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : null
-          })()}
+              todayLabel={t("actions.today", "Today")}
+              tomorrowLabel={t("actions.tomorrow", "Tomorrow")}
+              todayAriaLabel={t("actions.setDueToday", "Set due date to today")}
+              tomorrowAriaLabel={t("actions.setDueTomorrow", "Defer due date to tomorrow")}
+            />
+          )}
+          {shouldShowActionsMenu && (
+            <TaskActionsMenu
+              task={task}
+              isVisible={true}
+              onDeleteClick={() => deleteTask(task.id)}
+              onSelectClick={() => toggleTaskSelection(taskId)}
+              onArchiveToggle={handleArchiveToggle}
+              onEstimationClick={hasEstimation ? undefined : handleEstimationMenuClick}
+              onStartFocusTimerClick={activeFocusTimer ? undefined : () => startFocusTimer(task.id)}
+              isSubTask={false}
+              open={actionsMenuOpen}
+              onOpenChange={handleActionsMenuChange}
+            />
+          )}
         </div>
       </div>
+
+      {/* Hidden TimeEstimationPicker opened from the actions menu */}
+      <TimeEstimationPicker
+        taskId={task.id}
+        trigger={<button type="button" className="sr-only" aria-hidden="true" />}
+        open={showEstimationPicker}
+        setOpen={setShowEstimationPicker}
+        triggerMode="click"
+        disableOutsideInteraction={actionsMenuOpen}
+      />
     </MaterialCard>
   )
 }

@@ -1,5 +1,5 @@
 import React from "react"
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen } from "@/test-utils"
 import { mockNextNavigation, mockUseToast, mockNextThemes } from "@/test-utils"
 
@@ -12,12 +12,16 @@ mockNextThemes() // Full comprehensive theme mock with all properties
 // Mock toast hook
 mockUseToast()
 
-// Mock help content
-vi.mock("@/lib/help-content", () => ({
-  getHelpContent: vi.fn(() => ({
-    title: "Help Title",
-    content: "Help content here",
-  })),
+// Assistant availability depends on settings; covered by its own hook tests
+vi.mock("@/components/assistant/assistant-toggle-button", () => ({
+  AssistantToggleButton: () => <button aria-label="Show assistant" />,
+}))
+
+// Render tooltips inline (no provider/portal) so labels are queryable
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: () => null,
 }))
 
 // Mock useSidebar hook
@@ -31,6 +35,38 @@ vi.mock("@/components/ui/custom/sidebar", () => ({
     toggleSidebar: vi.fn(),
     state: "expanded",
   })),
+}))
+
+// Header subtitle atoms: Today progress and open task count
+const mockTaskLists = vi.hoisted(() => ({
+  completedToday: [{ id: "done-1", completed: true }],
+  today: [
+    { id: "open-1", completed: false },
+    { id: "open-2", completed: false },
+    { id: "open-3", completed: false },
+  ],
+  view: [
+    { id: "view-1", completed: false },
+    { id: "view-2", completed: false },
+    { id: "view-3", completed: true },
+  ],
+  viewId: "today",
+}))
+
+vi.mock("@tasktrove/atoms/core/tasks", () => ({
+  completedTasksTodayAtom: { debugLabel: "completedTasksTodayAtom" },
+}))
+
+vi.mock("@tasktrove/atoms/ui/task-counts", () => ({
+  taskListForViewAtom: () => ({ debugLabel: "taskListForViewAtom(today)" }),
+}))
+
+vi.mock("@tasktrove/atoms/ui/filtered-tasks", () => ({
+  filteredTasksAtom: { debugLabel: "filteredTasksAtom" },
+}))
+
+vi.mock("@/components/task/focus-timer-display", () => ({
+  FocusTimerDisplay: () => null,
 }))
 
 // Mock Jotai atoms with comprehensive atom values
@@ -58,8 +94,8 @@ vi.mock("jotai", () => ({
     }
     if (atom.debugLabel === "currentRouteContextAtom") {
       return {
-        pathname: "/today",
-        viewId: "today",
+        pathname: `/${mockTaskLists.viewId}`,
+        viewId: mockTaskLists.viewId,
         projectId: "view-today",
         routeType: "standard",
         routeParams: {},
@@ -80,6 +116,9 @@ vi.mock("jotai", () => ({
     if (atom.debugLabel === "tasksAtom") {
       return []
     }
+    if (atom.debugLabel === "completedTasksTodayAtom") return mockTaskLists.completedToday
+    if (atom.debugLabel === "taskListForViewAtom(today)") return mockTaskLists.today
+    if (atom.debugLabel === "filteredTasksAtom") return mockTaskLists.view
     return undefined
   }),
   useSetAtom: vi.fn(() => vi.fn()),
@@ -122,11 +161,6 @@ interface MockCommandPaletteProps {
   [key: string]: unknown
 }
 
-interface MockHelpPopoverProps {
-  title?: string
-  [key: string]: unknown
-}
-
 vi.mock("./view-options-popover", () => ({
   ViewOptionsPopover: () => <div data-testid="view-options-popover">View Options Popover</div>,
 }))
@@ -139,14 +173,8 @@ vi.mock("@/components/search/command-palette", () => ({
   ),
 }))
 
-vi.mock("@/components/ui/help-popover", () => ({
-  HelpPopover: ({ title }: MockHelpPopoverProps) => (
-    <div data-testid="help-popover">Help: {title}</div>
-  ),
-}))
-
-// Mock icons
-vi.mock("lucide-react", () => ({
+vi.mock("lucide-react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("lucide-react")>()),
   PanelRightClose: () => <span data-testid="panel-right-close-icon" />,
   PanelRightOpen: () => <span data-testid="panel-right-open-icon" />,
   Search: () => <span data-testid="search-icon" />,
@@ -196,7 +224,7 @@ describe("PageHeader", () => {
     render(<PageHeader {...defaultProps} />)
 
     // Should show collapse button since sidebar is open by default in mock
-    expect(screen.getByTitle("Collapse sidebar")).toBeInTheDocument()
+    expect(screen.getByLabelText("Collapse sidebar")).toBeInTheDocument()
   })
 
   it("renders view options popover", () => {
@@ -205,17 +233,18 @@ describe("PageHeader", () => {
     expect(screen.getByTestId("view-options-popover")).toBeInTheDocument()
   })
 
-  it("renders theme toggle button", () => {
+  it("renders search button with accessible label", () => {
     render(<PageHeader {...defaultProps} />)
 
-    const themeButton = screen.getByTitle(/Current theme.*Click to cycle themes/)
-    expect(themeButton).toBeInTheDocument()
+    screen.getByLabelText("Search").click()
+    expect(defaultProps.onAdvancedSearch).toHaveBeenCalled()
   })
 
-  it("renders help popover when help content is available", () => {
+  it("does not render theme toggle or help button (moved to user menu)", () => {
     render(<PageHeader {...defaultProps} />)
 
-    expect(screen.getByTestId("help-popover")).toBeInTheDocument()
+    expect(screen.queryByTitle(/Click to cycle themes/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle("Show help")).not.toBeInTheDocument()
   })
 
   it("renders command palette (hidden by default)", () => {
@@ -266,13 +295,37 @@ describe("PageHeader", () => {
     render(<PageHeader {...defaultProps} />)
 
     // With the current mock (open: true), should show collapse button
-    const collapseButton = screen.getByTitle("Collapse sidebar")
+    const collapseButton = screen.getByLabelText("Collapse sidebar")
     expect(collapseButton).toBeInTheDocument()
 
     // The key insight is that our sidebar context fix ensures:
     // - On mobile: open = openMobile (mobile sheet state)
     // - On desktop: open = open (desktop sidebar state)
     // This prevents the page header from showing incorrect button states
-    expect(collapseButton).toHaveAttribute("title", "Collapse sidebar")
+    expect(collapseButton).toHaveAttribute("aria-label", "Collapse sidebar")
+  })
+
+  describe("subtitle", () => {
+    afterEach(() => {
+      mockTaskLists.viewId = "today"
+    })
+
+    it("shows today's date, progress text and a progress bar in the Today view", () => {
+      render(<PageHeader />)
+
+      const subtitle = screen.getByTestId("page-header-subtitle")
+      expect(subtitle).toHaveTextContent("1 of 4 done")
+      const progress = screen.getByRole("progressbar")
+      expect(progress).toHaveAttribute("aria-valuenow", "1")
+      expect(progress).toHaveAttribute("aria-valuemax", "4")
+    })
+
+    it("shows the open task count in other views", () => {
+      mockTaskLists.viewId = "inbox"
+      render(<PageHeader />)
+
+      expect(screen.getByTestId("page-header-subtitle")).toHaveTextContent("2 tasks")
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
+    })
   })
 })

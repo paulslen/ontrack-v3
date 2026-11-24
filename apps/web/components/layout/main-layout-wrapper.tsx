@@ -27,8 +27,8 @@ import {
   useSidebar,
 } from "@/components/ui/custom/sidebar"
 import { TaskTroveLogo } from "@/components/ui/custom/tasktrove-logo"
+import { focusInlineTaskComposer } from "@/components/task/inline-task-composer"
 import { PageHeader } from "@/components/layout/page-header"
-import { PageFooter } from "@/components/layout/page-footer"
 import { PwaInstall } from "@/components/layout/pwa-install"
 import { QuickAddDialog } from "@/components/dialogs/quick-add-dialog"
 import { ProjectDialog } from "@/components/dialogs/project-dialog"
@@ -380,8 +380,11 @@ export function MainLayoutWrapper({ children }: MainLayoutWrapperProps) {
         const { key, metaKey, ctrlKey, shiftKey } = event
         const modifier = metaKey || ctrlKey
 
-        // Quick add task (Cmd/Ctrl + N or just N)
-        if ((modifier && key === "n") || key === "n") {
+        // Quick add task: N focuses the inline composer when present, Cmd/Ctrl+N opens the dialog
+        if (key === "n" && !modifier && focusInlineTaskComposer()) {
+          return true
+        }
+        if (key === "n") {
           openQuickAddAction()
           return true
         }
@@ -672,8 +675,6 @@ export function MainLayoutWrapper({ children }: MainLayoutWrapperProps) {
             <div className="flex-1 overflow-y-auto">
               <RouteContent onTaskClick={toggleTaskPanel} onVoiceCommand={handleVoiceCommand} />
             </div>
-
-            <PageFooter />
           </div>
         </SidebarInset>
 

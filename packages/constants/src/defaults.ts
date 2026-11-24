@@ -99,6 +99,8 @@ export const DEFAULT_ACTIVE_FILTERS = {
 export const SIDE_PANEL_WIDTH_MIN = 20;
 export const SIDE_PANEL_WIDTH_MAX = 80;
 export const SIDE_PANEL_WIDTH_DEFAULT = 25;
+/** Width (%) the task/assistant side panel opens at - an even split with the task list */
+export const SIDE_PANEL_OPEN_WIDTH = 50;
 
 /** Primary app sidebar width constraints (pixels) */
 export const SIDEBAR_WIDTH_PX_MIN = 250;

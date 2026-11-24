@@ -81,6 +81,8 @@ export function VirtualizedTaskList({
 }: VirtualizedTaskListProps) {
   const parentRef = useRef<HTMLDivElement>(null)
   const [enableMotion, setEnableMotion] = useState(false)
+  // Default rows are flat and separated by hairlines, so they sit flush without gaps
+  const shouldShowGaps = showGaps && variant !== "default"
 
   // Scroll-to-task functionality
   const scrollToTaskId = useAtomValue(scrollToTaskAtom)
@@ -238,7 +240,7 @@ export function VirtualizedTaskList({
                 ) : (
                   taskItem
                 )}
-                {showGaps && <div aria-hidden="true" className="h-1" />}
+                {shouldShowGaps && <div aria-hidden="true" className="h-1" />}
               </div>
             )
           })
@@ -301,7 +303,7 @@ export function VirtualizedTaskList({
                   ) : (
                     taskItem
                   )}
-                  {showGaps && <div aria-hidden="true" className="h-1" />}
+                  {shouldShowGaps && <div aria-hidden="true" className="h-1" />}
                 </motion.div>
               )
             })}

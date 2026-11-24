@@ -54,6 +54,11 @@ import { getMainNavItems, type MainNavItem } from "@/components/navigation/main-
 import { ComingSoonWrapper } from "@/components/ui/coming-soon-wrapper"
 import { createLabelSlug } from "@tasktrove/utils/routing"
 
+const SECTION_TRIGGER_CLASS =
+  "flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
+const SECTION_CHEVRON_CLASS =
+  "h-4 w-4 mr-1.5 transition-transform group-data-[state=closed]/collapsible:-rotate-90"
+
 interface SidebarNavProps {
   mainNavItemsFilter?: (
     items: ReturnType<typeof getMainNavItems>,
@@ -142,7 +147,7 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
 
       <Separator />
 
-      {/* Today - pinned above the collapsible Views section */}
+      {/* Today - pinned at the top, always visible */}
       {todayNavItem && (
         <SidebarGroup>
           <SidebarGroupContent>
@@ -151,18 +156,56 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
         </SidebarGroup>
       )}
 
-      {/* Main Navigation */}
-      <Collapsible className="group/collapsible">
+      {/* Labels - open by default, used most after Today */}
+      <Collapsible defaultOpen className="group/collapsible">
         <SidebarGroup>
           <SidebarGroupLabel>
-            <CollapsibleTrigger className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground">
-              <ChevronDown className="h-3 w-3 mr-2 transition-transform group-data-[state=closed]/collapsible:-rotate-90" />
-              {t("sections.views", "Views")}
-            </CollapsibleTrigger>
+            <div className="flex items-center justify-between w-full">
+              <CollapsibleTrigger className={SECTION_TRIGGER_CLASS}>
+                <ChevronDown className={SECTION_CHEVRON_CLASS} />
+                {t("sections.labels", "Labels")}
+              </CollapsibleTrigger>
+              <SidebarGroupAction onClick={() => openLabelDialog()}>
+                <Plus className="h-4 w-4" />
+              </SidebarGroupAction>
+            </div>
           </SidebarGroupLabel>
           <CollapsibleContent>
             <SidebarGroupContent>
-              <SidebarMenu>{otherNavItems.map(renderNavItem)}</SidebarMenu>
+              <SidebarMenu>
+                {/* Add root drop target for empty labels area - uses tree-item mode (golden path) */}
+                <DropTargetItem
+                  id="labels-root"
+                  index={-1}
+                  mode="tree-item"
+                  currentLevel={0}
+                  indentPerLevel={24}
+                  getData={() => ({
+                    type: "sidebar-labels-root-drop-target",
+                  })}
+                  canDrop={(sourceData) => sourceData.type === "sidebar-label"}
+                  validateInstruction={isValidLabelOperation}
+                  onDrop={handleLabelDrop}
+                >
+                  {labels.map((label, index) => (
+                    <DropTargetLabelItem
+                      key={label.id}
+                      labelId={label.id}
+                      index={index}
+                      onDrop={handleLabelDrop}
+                    >
+                      <DraggableLabelItem
+                        labelId={label.id}
+                        index={index}
+                        name={label.name}
+                        color={label.color}
+                      >
+                        <LabelMenuItem label={label} />
+                      </DraggableLabelItem>
+                    </DropTargetLabelItem>
+                  ))}
+                </DropTargetItem>
+              </SidebarMenu>
             </SidebarGroupContent>
           </CollapsibleContent>
         </SidebarGroup>
@@ -170,21 +213,31 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
 
       <Separator />
 
-      {/* Projects Section */}
+      {/* More - rarely used views and projects, collapsed by default */}
       <Collapsible className="group/collapsible">
         <SidebarGroup>
           <SidebarGroupLabel>
-            <div className="flex items-center justify-between w-full">
-              <CollapsibleTrigger className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground">
-                <ChevronDown className="h-3 w-3 mr-2 transition-transform group-data-[state=closed]/collapsible:-rotate-90" />
-                {t("sections.projects", "Projects")}
-              </CollapsibleTrigger>
-              <SidebarGroupAction onClick={() => openProjectDialog()}>
-                <Plus className="h-3 w-3" />
-              </SidebarGroupAction>
-            </div>
+            <CollapsibleTrigger className={SECTION_TRIGGER_CLASS}>
+              <ChevronDown className={SECTION_CHEVRON_CLASS} />
+              {t("sections.more", "More")}
+            </CollapsibleTrigger>
           </SidebarGroupLabel>
           <CollapsibleContent>
+            <SidebarGroupContent>
+              <SidebarMenu>{otherNavItems.map(renderNavItem)}</SidebarMenu>
+            </SidebarGroupContent>
+
+            {/* Projects */}
+            <SidebarGroupLabel className="mt-2">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-muted-foreground">
+                  {t("sections.projects", "Projects")}
+                </span>
+                <SidebarGroupAction onClick={() => openProjectDialog()}>
+                  <Plus className="h-4 w-4" />
+                </SidebarGroupAction>
+              </div>
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {/* Drop zone for root group items with drag and drop support */}
@@ -223,63 +276,6 @@ export function SidebarNav({ mainNavItemsFilter }: SidebarNavProps) {
                       )
                     }
                   })}
-                </DropTargetItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
-      </Collapsible>
-
-      <Separator />
-
-      {/* Labels Section */}
-      <Collapsible className="group/collapsible">
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            <div className="flex items-center justify-between w-full">
-              <CollapsibleTrigger className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground">
-                <ChevronDown className="h-3 w-3 mr-2 transition-transform group-data-[state=closed]/collapsible:-rotate-90" />
-                {t("sections.labels", "Labels")}
-              </CollapsibleTrigger>
-              <SidebarGroupAction onClick={() => openLabelDialog()}>
-                <Plus className="h-3 w-3" />
-              </SidebarGroupAction>
-            </div>
-          </SidebarGroupLabel>
-          <CollapsibleContent>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {/* Add root drop target for empty labels area - uses tree-item mode (golden path) */}
-                <DropTargetItem
-                  id="labels-root"
-                  index={-1}
-                  mode="tree-item"
-                  currentLevel={0}
-                  indentPerLevel={24}
-                  getData={() => ({
-                    type: "sidebar-labels-root-drop-target",
-                  })}
-                  canDrop={(sourceData) => sourceData.type === "sidebar-label"}
-                  validateInstruction={isValidLabelOperation}
-                  onDrop={handleLabelDrop}
-                >
-                  {labels.map((label, index) => (
-                    <DropTargetLabelItem
-                      key={label.id}
-                      labelId={label.id}
-                      index={index}
-                      onDrop={handleLabelDrop}
-                    >
-                      <DraggableLabelItem
-                        labelId={label.id}
-                        index={index}
-                        name={label.name}
-                        color={label.color}
-                      >
-                        <LabelMenuItem label={label} />
-                      </DraggableLabelItem>
-                    </DropTargetLabelItem>
-                  ))}
                 </DropTargetItem>
               </SidebarMenu>
             </SidebarGroupContent>

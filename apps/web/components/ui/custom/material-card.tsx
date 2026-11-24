@@ -29,7 +29,7 @@ interface MaterialCardProps {
   /** Data attributes for testing/selection */
   "data-task-focused"?: boolean
   /** Variant of the card */
-  variant?: "default" | "compact" | "kanban" | "narrow" | "calendar" | "subtask"
+  variant?: "default" | "flat" | "compact" | "kanban" | "narrow" | "calendar" | "subtask"
 }
 
 export function MaterialCard({
@@ -77,6 +77,13 @@ export function MaterialCard({
       "shadow-sm hover:shadow-lg dark:hover:shadow-lg dark:hover:shadow-gray-300/20",
       "hover:-translate-y-0.5",
       selected && cn(selectedStyles, "shadow-md"),
+    ),
+    // Borderless list row separated by a hairline - no card chrome
+    flat: cn(
+      "bg-transparent duration-200",
+      "px-2 sm:px-3 py-3.5 border-b border-border/60",
+      "hover:bg-accent/40",
+      selected && "bg-accent text-accent-foreground",
     ),
     compact: cn(
       baseStyles,

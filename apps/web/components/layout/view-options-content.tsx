@@ -32,6 +32,8 @@ import {
   Archive,
   Volume2,
 } from "lucide-react"
+import { TaskFilterControls } from "@/components/task/task-filter-controls"
+import { TaskSortControls } from "@/components/task/task-sort-controls"
 import { HelpPopover } from "@/components/ui/help-popover"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { cn } from "@/lib/utils"
@@ -212,6 +214,17 @@ export function ViewOptionsContent({ onAdvancedSearch }: ViewOptionsContentProps
         />
       </div>
       <div className="space-y-4 pt-4">
+        {/* Filter & Sort - moved here from the list toolbar to keep the list calm */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">
+            {t("viewOptions.filterSort.label", "Filter & sort")}
+          </Label>
+          <div className="flex items-center gap-2">
+            <TaskFilterControls />
+            <TaskSortControls />
+          </div>
+        </div>
+
         {/* View Mode Section */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">

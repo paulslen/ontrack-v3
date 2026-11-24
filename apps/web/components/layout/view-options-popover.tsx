@@ -48,7 +48,13 @@ function ViewOptionsPopoverComponent({ onAdvancedSearch, className }: ViewOption
       className="w-80 p-3"
       align="end"
     >
-      <Button variant="ghost" size="sm" className={cn("gap-2 cursor-pointer", className)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn("h-9 gap-2 cursor-pointer [&_svg]:size-5", className)}
+        title="View options"
+        aria-label="View options"
+      >
         {getButtonIcon()}
         {getViewIndicator()}
       </Button>

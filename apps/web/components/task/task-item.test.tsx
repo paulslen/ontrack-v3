@@ -11,6 +11,7 @@ import React from "react"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent, waitFor, within } from "@/test-utils"
 import userEvent from "@testing-library/user-event"
+import { isToday } from "date-fns"
 import { Provider, useSetAtom } from "jotai"
 import { TaskItem } from "./task-item"
 import type { Task } from "@tasktrove/types/core"
@@ -54,6 +55,7 @@ vi.mock("date-fns", () => ({
   isToday: vi.fn(() => false),
   isTomorrow: vi.fn(() => false),
   isPast: vi.fn(() => false),
+  addDays: vi.fn((date: Date, amount: number) => new Date(date.getTime() + amount * 86400000)),
   endOfDay: vi.fn((date) => new Date(date)),
   isBefore: vi.fn(() => false),
   parse: vi.fn(() => new Date()),
@@ -924,7 +926,7 @@ describe("TaskItem", () => {
       )
 
       expect(screen.getByText("Test Task")).toBeInTheDocument()
-      expect(screen.getByText("Test description")).toBeInTheDocument()
+      expect(screen.getByRole("group")).toBeInTheDocument()
       expect(screen.getByTestId("task-actions-menu")).toBeInTheDocument()
     })
 
@@ -1272,7 +1274,7 @@ describe("TaskItem", () => {
 
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1291,7 +1293,7 @@ describe("TaskItem", () => {
 
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1324,7 +1326,7 @@ describe("TaskItem", () => {
 
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1357,7 +1359,7 @@ describe("TaskItem", () => {
 
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1387,20 +1389,16 @@ describe("TaskItem", () => {
       expect(descriptionDiv).toBeInTheDocument()
     })
 
-    it("shows placeholder for empty description on hover", () => {
-      const taskWithoutDescription = { ...mockTask, description: undefined, id: TEST_TASK_ID_2 }
-      registerTask(taskWithoutDescription)
-
+    it("keeps the description out of the default row", () => {
       render(
         <Provider>
-          <TaskItem taskId={taskWithoutDescription.id} />
+          <TaskItem taskId={mockTask.id} />
         </Provider>,
       )
 
-      // Description placeholder should be present but invisible initially
-      const placeholder = screen.getByText("Add description...")
-      expect(placeholder).toBeInTheDocument()
-      expect(placeholder).toHaveClass("invisible")
+      // Descriptions live in the side panel; the focus row shows only the title
+      expect(screen.queryByText("Test description")).not.toBeInTheDocument()
+      expect(screen.queryByText("Add description...")).not.toBeInTheDocument()
     })
   })
 
@@ -1417,23 +1415,21 @@ describe("TaskItem", () => {
       expect(screen.getByText("2024-01-15")).toBeInTheDocument()
     })
 
-    it("displays priority flag", () => {
+    it("conveys priority through the check circle instead of a flag chip", () => {
       render(
         <Provider>
           <TaskItem taskId={mockTask.id} />
         </Provider>,
       )
 
-      // There will be multiple flag icons due to priority popover, so check for P3 text
-      expect(screen.getByText("P3")).toBeInTheDocument()
-      const flagIcons = screen.getAllByTestId("flag-icon")
-      expect(flagIcons.length).toBeGreaterThan(0)
+      expect(screen.getByTestId("checkbox")).toHaveAttribute("priority", "3")
+      expect(screen.queryByText("P3")).not.toBeInTheDocument()
     })
 
     it("displays comments indicator", () => {
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1444,7 +1440,7 @@ describe("TaskItem", () => {
     it("displays subtasks progress", () => {
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1479,15 +1475,14 @@ describe("TaskItem", () => {
       expect(workLabels.length).toBeGreaterThan(0)
     })
 
-    it("displays project badge when showProjectBadge is true", () => {
+    it("keeps the project chip out of the default row", () => {
       render(
         <Provider>
           <TaskItem taskId={mockTask.id} showProjectBadge={true} />
         </Provider>,
       )
 
-      const projectLabels = screen.getAllByText("Project 1")
-      expect(projectLabels.length).toBeGreaterThan(0)
+      expect(screen.queryByText("Project 1")).not.toBeInTheDocument()
     })
 
     it("hides project badge when showProjectBadge is false", () => {
@@ -1502,21 +1497,6 @@ describe("TaskItem", () => {
   })
 
   describe("Priority Management", () => {
-    it("shows priority for tasks with priority 1-3", () => {
-      const priorityTask = { ...mockTask, priority: 1 as const }
-
-      // Register the task so it can be found by ID
-      registerTask(priorityTask)
-
-      render(
-        <Provider>
-          <TaskItem taskId={priorityTask.id} />
-        </Provider>,
-      )
-
-      expect(screen.getByText("P1")).toBeInTheDocument()
-    })
-
     it("does not show priority for priority 4 (no priority)", () => {
       const noPriorityTask = { ...mockTask, priority: 4 as const }
 
@@ -1530,28 +1510,6 @@ describe("TaskItem", () => {
       )
 
       expect(screen.queryByText("P4")).not.toBeInTheDocument()
-    })
-
-    it("opens priority popover when priority is clicked", async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Provider>
-          <TaskItem taskId={mockTask.id} />
-        </Provider>,
-      )
-
-      const priorityElement = screen.getByText("P3")
-      expect(priorityElement).toBeInTheDocument()
-
-      // Click the priority element to open popover
-      await user.click(priorityElement)
-
-      // Check that the priority options appear
-      expect(screen.getByText("Priority 1")).toBeInTheDocument()
-      expect(screen.getByText("Priority 2")).toBeInTheDocument()
-      expect(screen.getByText("Priority 3")).toBeInTheDocument()
-      expect(screen.getByText("No priority")).toBeInTheDocument()
     })
   })
 
@@ -1686,7 +1644,7 @@ describe("TaskItem", () => {
 
       render(
         <Provider>
-          <TaskItem taskId={mockTask.id} />
+          <TaskItem variant="kanban" taskId={mockTask.id} />
         </Provider>,
       )
 
@@ -1697,104 +1655,7 @@ describe("TaskItem", () => {
     })
   })
 
-  describe("Project Management", () => {
-    it("shows project information when task has a project", () => {
-      render(
-        <Provider>
-          <TaskItem taskId={mockTask.id} showProjectBadge={true} />
-        </Provider>,
-      )
-
-      const projectLabels = screen.getAllByText("Project 1")
-      expect(projectLabels.length).toBeGreaterThan(0)
-    })
-
-    it("handles project updates through popover", () => {
-      render(
-        <Provider>
-          <TaskItem taskId={mockTask.id} />
-        </Provider>,
-      )
-
-      const projectPopover = screen
-        .getAllByTestId("project-popover")
-        .find((el) => el.textContent?.includes("Project 1"))
-      expect(projectPopover).toBeInTheDocument()
-    })
-
-    it("maintains consistent alignment between tasks with and without projects", () => {
-      // Create task with project
-      const taskWithProject = { ...mockTask, id: TEST_TASK_ID_1, projectId: TEST_PROJECT_ID_1 }
-      // Create task without project
-      const taskWithoutProject = { ...mockTask, id: TEST_TASK_ID_2, projectId: undefined }
-
-      registerTask(taskWithProject)
-      registerTask(taskWithoutProject)
-
-      const { container, rerender } = render(
-        <Provider>
-          <TaskItem taskId={taskWithProject.id} showProjectBadge={true} />
-        </Provider>,
-      )
-
-      // Get the task with project and verify project area is present
-      const taskTitleWithProject = screen.getByRole("heading", { name: /test task/i })
-      expect(taskTitleWithProject).toBeInTheDocument()
-
-      // Check that project area shows project information
-      const projectElements = screen.getAllByTestId("project-popover")
-      const projectElement = projectElements.find((el) => el.textContent?.includes("Project 1"))
-      expect(projectElement).toBeInTheDocument()
-
-      // Get initial container structure for comparison
-      const initialHTML = container.innerHTML
-
-      // Re-render with task without project
-      rerender(
-        <Provider>
-          <TaskItem taskId={taskWithoutProject.id} showProjectBadge={true} />
-        </Provider>,
-      )
-
-      // Verify task without project also renders with consistent structure
-      const taskTitleWithoutProject = screen.getByRole("heading", { name: /test task/i })
-      expect(taskTitleWithoutProject).toBeInTheDocument()
-
-      // The fix ensures that tasks without projects still reserve space for the project area
-      // This prevents layout shift between tasks with and without projects
-      const taskContainerWithoutProject = taskTitleWithoutProject.closest("[data-task-focused]")
-      expect(taskContainerWithoutProject).toHaveClass("group", "relative")
-
-      // Both task items should have similar overall structure
-      // The key fix is that both maintain consistent width for the metadata area
-      const updatedHTML = container.innerHTML
-
-      // Both should have the same number of metadata sections (left side metadata)
-      const leftMetadataSectionsWithProject = (initialHTML.match(/flex items-center gap-1/g) || [])
-        .length
-      const leftMetadataSectionsWithoutProject = (
-        updatedHTML.match(/flex items-center gap-1/g) || []
-      ).length
-
-      // The alignment fix ensures both have similar metadata structure
-      expect(leftMetadataSectionsWithoutProject).toBeGreaterThanOrEqual(0)
-      expect(leftMetadataSectionsWithProject).toBeGreaterThanOrEqual(0)
-    })
-  })
-
   describe("Utility Functions", () => {
-    it("correctly identifies task project", () => {
-      render(
-        <Provider>
-          <TaskItem taskId={mockTask.id} />
-        </Provider>,
-      )
-
-      // Project should be displayed correctly
-      const projectLabels = screen.getAllByText("Project 1")
-      expect(projectLabels.length).toBeGreaterThan(0)
-    })
-
     it("handles task without project", () => {
       const taskWithoutProject = { ...mockTask, projectId: undefined, id: TEST_TASK_ID_2 }
       registerTask(taskWithoutProject)
@@ -1847,10 +1708,9 @@ describe("TaskItem", () => {
       )
 
       expect(screen.getByText("Empty Task")).toBeInTheDocument()
-      // Flag icon should be present as "Add priority" button for P4 priority tasks
-      expect(screen.queryByTestId("flag-icon")).toBeInTheDocument()
-      // Calendar icon should be present as "Add date" button for tasks without due date
-      expect(screen.queryByTestId("calendar-icon")).toBeInTheDocument()
+      // A bare task is just its title - no empty "add" affordances
+      expect(screen.queryByTestId("flag-icon")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("calendar-icon")).not.toBeInTheDocument()
     })
 
     it("handles empty title gracefully", () => {
@@ -1891,10 +1751,9 @@ describe("TaskItem", () => {
       expect(taskContainer).toHaveClass("custom-class")
     })
 
-    it("preserves left border color on hover in default variant", async () => {
+    it("renders the default variant as a flat row without a priority border", () => {
       const taskWithPriority1 = { ...mockTask, id: TEST_TASK_ID_2, priority: 1 as const }
       registerTask(taskWithPriority1)
-      const user = userEvent.setup()
 
       render(
         <Provider>
@@ -1903,49 +1762,12 @@ describe("TaskItem", () => {
       )
 
       const container = screen.getByText("Test Task").closest("[data-task-focused]")
-      expect(container).toBeTruthy()
-
-      // Should have priority border color initially
-      expect(container).toHaveClass("border-l-red-500")
-
-      // Hover over the task
-      if (container) {
-        await user.hover(container)
-      }
-
-      // Should still have priority border color after hover (hover should not override it)
-      expect(container).toHaveClass("border-l-red-500")
-      expect(container).not.toHaveClass("hover:border-border/80") // Ensure problematic hover class is not present
+      expect(container).toHaveClass("border-b")
+      expect(container).not.toHaveClass("border-l-red-500")
     })
   })
 
   describe("Description Italic Styling Bug Fix", () => {
-    it("does not apply italic styling when description is being edited for the first time in default variant", async () => {
-      const taskWithoutDescription = { ...mockTask, description: "", id: TEST_TASK_ID_2 }
-      const user = userEvent.setup()
-      registerTask(taskWithoutDescription)
-
-      render(
-        <Provider>
-          <TaskItem taskId={taskWithoutDescription.id} />
-        </Provider>,
-      )
-
-      // Find placeholder in view mode
-      const placeholderText = screen.getByText("Add description...")
-      expect(placeholderText).toBeInTheDocument()
-      expect(placeholderText).toHaveClass("italic")
-
-      // Click to enter edit mode
-      await user.click(placeholderText)
-
-      // After entering edit mode, find the editable div
-      const descriptionDiv = screen.getByTestId("editable-div")
-      expect(descriptionDiv).toBeInTheDocument()
-      expect(descriptionDiv).not.toHaveClass("italic")
-      expect(descriptionDiv).toHaveClass("text-muted-foreground")
-    })
-
     it("does not apply italic styling when description is being edited for the first time in kanban variant", async () => {
       const taskWithoutDescription = { ...mockTask, description: "", id: TEST_TASK_ID_2 }
       const user = userEvent.setup()
@@ -1972,28 +1794,6 @@ describe("TaskItem", () => {
       expect(descriptionDiv).toHaveClass("text-muted-foreground")
     })
 
-    it("restores proper styling after description editing is finished in default variant", async () => {
-      const taskWithDescription = {
-        ...mockTask,
-        id: TEST_TASK_ID_2,
-        description: "New description",
-      }
-      registerTask(taskWithDescription)
-
-      render(
-        <Provider>
-          <TaskItem taskId={taskWithDescription.id} />
-        </Provider>,
-      )
-
-      const descriptionDiv = screen.getByText("New description")
-      expect(descriptionDiv).toBeInTheDocument()
-
-      // When task has content, should not have italic styling
-      expect(descriptionDiv).not.toHaveClass("italic")
-      expect(descriptionDiv).toHaveClass("text-muted-foreground")
-    })
-
     it("restores proper styling after description editing is finished in kanban variant", async () => {
       const taskWithDescription = {
         ...mockTask,
@@ -2016,25 +1816,6 @@ describe("TaskItem", () => {
       expect(descriptionDiv).toHaveClass("text-muted-foreground")
     })
 
-    it("shows italic styling when description is empty and not being edited", () => {
-      const taskWithoutDescription = { ...mockTask, id: TEST_TASK_ID_2, description: "" }
-      registerTask(taskWithoutDescription)
-
-      render(
-        <Provider>
-          <TaskItem taskId={taskWithoutDescription.id} />
-        </Provider>,
-      )
-
-      // In view mode (not editing), placeholder is shown as regular text with italic styling
-      const placeholderText = screen.getByText("Add description...")
-      expect(placeholderText).toBeInTheDocument()
-
-      // When not editing and empty, should have italic styling
-      expect(placeholderText).toHaveClass("italic")
-      expect(placeholderText).toHaveClass("text-muted-foreground/60")
-    })
-
     it("does not show italic styling when description has content", () => {
       const taskWithDescription = {
         ...mockTask,
@@ -2045,7 +1826,7 @@ describe("TaskItem", () => {
 
       render(
         <Provider>
-          <TaskItem taskId={taskWithDescription.id} />
+          <TaskItem variant="kanban" taskId={taskWithDescription.id} />
         </Provider>,
       )
 
@@ -2058,91 +1839,112 @@ describe("TaskItem", () => {
     })
   })
 
-  describe("Description Layout Stability", () => {
-    it("maintains consistent height by always reserving space for description on desktop", () => {
-      const taskWithoutDescription = { ...mockTask, description: "", id: TEST_TASK_ID_2 }
-      registerTask(taskWithoutDescription)
+  describe("Default focus row", () => {
+    it("shows no empty metadata affordances", () => {
+      const bareTask: Task = {
+        ...mockTask,
+        id: TEST_TASK_ID_2,
+        dueDate: undefined,
+        recurring: undefined,
+        priority: 4,
+        labels: [],
+        subtasks: [],
+        comments: [],
+      }
+      registerTask(bareTask)
 
       render(
         <Provider>
-          <TaskItem taskId={taskWithoutDescription.id} />
+          <TaskItem taskId={bareTask.id} />
         </Provider>,
       )
 
-      // Find the description container div
-      // The outer div should always be in the layout (sm:block), never conditionally hidden (sm:hidden)
-      const placeholder = screen.getByText("Add description...")
-      const descriptionContainer = placeholder.closest('div[class*="mb-2"]')
-
-      expect(descriptionContainer).toBeInTheDocument()
-
-      // The outer container should have sm:block (visible on desktop) but not conditional sm:hidden
-      // This ensures it always reserves space and doesn't cause layout shift
-      const containerClasses = descriptionContainer?.className || ""
-      expect(containerClasses).toContain("sm:block")
-      expect(containerClasses).toContain("hidden") // Hidden on mobile
-
-      // The inner content uses 'invisible' class to hide/show without affecting layout
-      expect(placeholder).toHaveClass("invisible")
+      expect(screen.queryByText("Add date")).not.toBeInTheDocument()
+      expect(screen.queryByText("Add label")).not.toBeInTheDocument()
+      expect(screen.queryByText("Add priority")).not.toBeInTheDocument()
     })
 
-    it("shows description content on hover without layout shift", async () => {
-      const taskWithoutDescription = { ...mockTask, description: "", id: TEST_TASK_ID_2 }
-      registerTask(taskWithoutDescription)
-
+    it("does not render column separators", () => {
       const { container } = render(
         <Provider>
-          <TaskItem taskId={taskWithoutDescription.id} />
+          <TaskItem taskId={mockTask.id} />
         </Provider>,
       )
 
-      // Find the task container
-      const taskCard = container.querySelector("[data-task-focused]")
-      expect(taskCard).toBeInTheDocument()
-
-      // Get initial height of the task item
-      const initialHeight = taskCard?.getBoundingClientRect().height || 0
-
-      // Simulate hover by triggering mouseenter
-      if (taskCard) {
-        fireEvent.mouseEnter(taskCard)
-      }
-
-      // Wait for any state updates
-      await waitFor(() => {
-        const placeholder = screen.getByText("Add description...")
-        // After hover, the invisible class should be removed (content becomes visible)
-        // but the layout should not shift
-        expect(placeholder).not.toHaveClass("invisible")
-      })
-
-      // Verify height hasn't changed (no layout shift)
-      const finalHeight = taskCard?.getBoundingClientRect().height || 0
-      expect(finalHeight).toBe(initialHeight)
+      const separators = Array.from(container.querySelectorAll("span")).filter(
+        (el) => el.textContent === "|",
+      )
+      expect(separators).toHaveLength(0)
     })
 
-    it("description area is always present in DOM on desktop to prevent layout shift", () => {
-      const taskWithoutDescription = { ...mockTask, description: "", id: TEST_TASK_ID_2 }
-      registerTask(taskWithoutDescription)
+    it("always shows the Today | Tomorrow toggle", async () => {
+      const user = userEvent.setup()
+      render(
+        <Provider>
+          <TaskItem taskId={mockTask.id} />
+        </Provider>,
+      )
+
+      const todayButton = screen.getByRole("button", { name: "Set due date to today" })
+      const tomorrowButton = screen.getByRole("button", { name: "Defer due date to tomorrow" })
+      expect(todayButton).toHaveTextContent("Today")
+      expect(tomorrowButton).toHaveTextContent("Tomorrow")
+      expect(todayButton).toHaveAttribute("aria-pressed", "false")
+
+      await user.click(tomorrowButton)
+      expect(mockUpdateTask).toHaveBeenCalledWith({
+        updateRequest: { id: TEST_TASK_ID_1, dueDate: expect.any(Date) },
+      })
+    })
+
+    it("marks Today as selected and hides the date chip when due today", () => {
+      vi.mocked(isToday).mockReturnValue(true)
+      try {
+        const dueTodayTask = {
+          ...mockTask,
+          id: TEST_TASK_ID_2,
+          dueDate: new Date(),
+          recurring: undefined,
+        }
+        registerTask(dueTodayTask)
+
+        render(
+          <Provider>
+            <TaskItem taskId={dueTodayTask.id} />
+          </Provider>,
+        )
+
+        const todayButton = screen.getByRole("button", { name: "Set due date to today" })
+        expect(todayButton).toHaveAttribute("aria-pressed", "true")
+        expect(screen.queryByTestId("task-schedule-popover")).not.toBeInTheDocument()
+      } finally {
+        vi.mocked(isToday).mockReturnValue(false)
+      }
+    })
+
+    it("hides quick reschedule actions for completed tasks", () => {
+      const doneTask = { ...mockTask, id: TEST_TASK_ID_2, completed: true }
+      registerTask(doneTask)
 
       render(
         <Provider>
-          <TaskItem taskId={taskWithoutDescription.id} />
+          <TaskItem taskId={doneTask.id} />
         </Provider>,
       )
 
-      // The description placeholder should always be in the DOM (not conditionally rendered)
-      const placeholder = screen.getByText("Add description...")
-      expect(placeholder).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Set due date to today" }),
+      ).not.toBeInTheDocument()
+    })
 
-      // The outer container should never be removed from layout (no conditional sm:hidden)
-      const descriptionContainer = placeholder.closest('div[class*="mb-2"]')
-      expect(descriptionContainer).toBeInTheDocument()
+    it("hides the idle focus-timer button from the row", () => {
+      render(
+        <Provider>
+          <TaskItem taskId={mockTask.id} />
+        </Provider>,
+      )
 
-      // Verify the container maintains its place in the layout
-      // by checking it has bottom margin which reserves vertical space
-      const containerClasses = descriptionContainer?.className || ""
-      expect(containerClasses).toMatch(/mb-2/)
+      expect(screen.queryByTitle("Start focus timer")).not.toBeInTheDocument()
     })
   })
 
@@ -3893,9 +3695,7 @@ describe("TaskItem", () => {
           </Provider>,
         )
 
-        // TaskSchedulePopover should be present as "Add date" button when no schedule data exists
-        expect(screen.queryByTestId("task-schedule-popover")).toBeInTheDocument()
-        expect(screen.getByText("Add date")).toBeInTheDocument()
+        expect(screen.queryByTestId("task-schedule-popover")).not.toBeInTheDocument()
       })
 
       it("does not show TaskSchedulePopover for tasks without schedule", () => {
@@ -3912,9 +3712,8 @@ describe("TaskItem", () => {
           </Provider>,
         )
 
-        // TaskSchedulePopover should show "Add date" button even when there's no due date
-        expect(screen.queryByTestId("task-schedule-popover")).toBeInTheDocument()
-        expect(screen.getByText("Add date")).toBeInTheDocument()
+        // Dates are set from the Today | Tomorrow toggle or the side panel
+        expect(screen.queryByTestId("task-schedule-popover")).not.toBeInTheDocument()
       })
 
       it("shows TaskSchedulePopover for recurring tasks without due date", () => {

@@ -3,6 +3,18 @@ import { render, screen, fireEvent, waitFor } from "@/test-utils"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { NavUser } from "./nav-user"
 import { SidebarProvider } from "@/components/ui/custom/sidebar"
+import { mockNextThemes } from "@/test-utils"
+
+const mockSetTheme = vi.fn()
+mockNextThemes({ theme: "light", setTheme: mockSetTheme })
+
+// Mock help content
+vi.mock("@/lib/help-content", () => ({
+  getHelpContent: vi.fn(() => ({
+    title: "Help Title",
+    content: "Help content here",
+  })),
+}))
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
@@ -83,6 +95,38 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
     <div data-testid="dropdown-group">{children}</div>
   ),
   DropdownMenuSeparator: () => <div data-testid="dropdown-separator" />,
+  DropdownMenuSub: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSubTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dropdown-sub-trigger">{children}</div>
+  ),
+  DropdownMenuSubContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuRadioGroup: ({
+    children,
+    value,
+    onValueChange,
+  }: {
+    children: React.ReactNode
+    value?: string
+    onValueChange?: (value: string) => void
+  }) => (
+    <div
+      data-testid="theme-radio-group"
+      data-value={value}
+      onClick={(e) => {
+        const target = e.target
+        if (target instanceof HTMLElement && target.dataset.value) {
+          onValueChange?.(target.dataset.value)
+        }
+      }}
+    >
+      {children}
+    </div>
+  ),
+  DropdownMenuRadioItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <div data-testid={`theme-option-${value}`} data-value={value}>
+      {children}
+    </div>
+  ),
 }))
 
 // Mock AboutModal
@@ -354,6 +398,45 @@ describe("NavUser", () => {
           open: false,
         }),
       )
+    })
+  })
+
+  describe("Theme and help", () => {
+    it("shows theme options with the current theme selected", () => {
+      render(
+        <TestWrapper>
+          <NavUser />
+        </TestWrapper>,
+      )
+
+      expect(screen.getByText("Theme")).toBeInTheDocument()
+      expect(screen.getByTestId("theme-radio-group")).toHaveAttribute("data-value", "light")
+      expect(screen.getByTestId("theme-option-dark")).toBeInTheDocument()
+      expect(screen.getByTestId("theme-option-system")).toBeInTheDocument()
+    })
+
+    it("sets the theme when an option is chosen", () => {
+      render(
+        <TestWrapper>
+          <NavUser />
+        </TestWrapper>,
+      )
+
+      fireEvent.click(screen.getByTestId("theme-option-dark"))
+      expect(mockSetTheme).toHaveBeenCalledWith("dark")
+    })
+
+    it("opens help for the current view", async () => {
+      render(
+        <TestWrapper>
+          <NavUser />
+        </TestWrapper>,
+      )
+
+      fireEvent.click(screen.getByText("Help for this view"))
+      await waitFor(() => {
+        expect(screen.getByText("Help content here")).toBeInTheDocument()
+      })
     })
   })
 })
